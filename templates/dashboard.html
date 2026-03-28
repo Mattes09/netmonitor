@@ -93,6 +93,18 @@
             <a href="/device/{{ device.id }}" class="btn btn-sm btn-outline-secondary" title="History">
               <i class="bi bi-clock-history"></i>
             </a>
+            {% if device.ssh_username %}
+            <form method="post" action="/device/{{ device.id }}/connect" class="d-inline">
+              <button class="btn btn-sm btn-outline-info" title="SSH: show version">
+                <i class="bi bi-terminal"></i>
+              </button>
+            </form>
+            <form method="post" action="/device/{{ device.id }}/backup" class="d-inline">
+              <button class="btn btn-sm btn-outline-warning" title="Backup running-config">
+                <i class="bi bi-floppy"></i>
+              </button>
+            </form>
+            {% endif %}
             <form method="post" action="/device/{{ device.id }}/delete" class="d-inline"
                   onsubmit="return confirm('Delete {{ device.name }}?')">
               <button class="btn btn-sm btn-outline-danger" title="Delete">

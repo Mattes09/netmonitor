@@ -46,6 +46,22 @@
           </button>
         </form>
 
+        {% if device.ssh_username %}
+        <form method="post" action="/device/{{ device.id }}/connect">
+          <button class="btn btn-info text-white">
+            <i class="bi bi-terminal me-1"></i>Connect
+          </button>
+        </form>
+        <form method="post" action="/device/{{ device.id }}/backup">
+          <button class="btn btn-warning">
+            <i class="bi bi-floppy me-1"></i>Backup Config
+          </button>
+        </form>
+        <a href="/device/{{ device.id }}/backups" class="btn btn-outline-secondary">
+          <i class="bi bi-archive me-1"></i>Backups
+        </a>
+        {% endif %}
+
         <form method="post" action="/device/{{ device.id }}/delete"
               onsubmit="return confirm('Delete {{ device.name }}?')">
           <button class="btn btn-outline-danger">

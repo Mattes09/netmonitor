@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Backups — {{ device.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="/device/{{ device.id }}">{{ device.name }}</a></li>
+    <li class="breadcrumb-item active">Config Backups</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0"><i class="bi bi-floppy me-2"></i>Config Backups</h4>
+    <small class="text-muted">
+      {{ device.name }} &mdash; <code>{{ device.ip_address }}</code>
+    </small>
+  </div>
+  <form method="post" action="/device/{{ device.id }}/backup">
+    <button class="btn btn-warning">
+      <i class="bi bi-floppy me-1"></i>Take New Backup
+    </button>
+  </form>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th>#</th>
+          <th>Captured At</th>
+          <th>Size</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in backups %}
+        <tr>
+          <td class="text-muted">{{ b.id }}</td>
+          <td>{{ b.created_at }}</td>
+          <td>{{ "%.1f"|format(b.size / 1024) }} KB</td>
+          <td class="text-end">
+            <a href="/device/{{ device.id }}/backups/{{ b.id }}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-eye me-1"></i>View
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="text-center text-muted py-4">
+            No backups yet. Click <strong>Take New Backup</strong> to capture the running config.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ command }} — {{ device.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="/device/{{ device.id }}">{{ device.name }}</a></li>
+    <li class="breadcrumb-item active">SSH Output</li>
+  </ol>
+</nav>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+    <span>
+      <i class="bi bi-terminal me-2"></i>
+      <code class="text-warning">{{ command }}</code>
+      &nbsp;&mdash;&nbsp;{{ device.name }}
+      <span class="badge bg-secondary ms-2">{{ device.ip_address }}</span>
+    </span>
+    <div class="d-flex gap-2">
+      <form method="post" action="/device/{{ device.id }}/backup">
+        <button class="btn btn-sm btn-warning">
+          <i class="bi bi-floppy me-1"></i>Backup Config
+        </button>
+      </form>
+      <a href="/device/{{ device.id }}" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <pre class="m-0 p-3" style="background:#1e1e1e;color:#d4d4d4;font-size:.85rem;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow-y:auto;">{{ output }}</pre>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Backup {{ backup.id }} — {{ device.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="/device/{{ device.id }}">{{ device.name }}</a></li>
+    <li class="breadcrumb-item"><a href="/device/{{ device.id }}/backups">Backups</a></li>
+    <li class="breadcrumb-item active">#{{ backup.id }}</li>
+  </ol>
+</nav>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+    <span>
+      <i class="bi bi-floppy me-2"></i>Running Config Backup
+      &nbsp;&mdash;&nbsp;{{ device.name }}
+      <span class="badge bg-secondary ms-2">{{ device.ip_address }}</span>
+      <span class="badge bg-info text-dark ms-1">{{ backup.created_at }}</span>
+    </span>
+    <div class="d-flex gap-2">
+      <a href="/device/{{ device.id }}/backups" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-list me-1"></i>All Backups
+      </a>
+      <a href="/device/{{ device.id }}" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-arrow-left me-1"></i>Device
+      </a>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <pre class="m-0 p-3" style="background:#1e1e1e;color:#d4d4d4;font-size:.85rem;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow-y:auto;">{{ backup.config_text }}</pre>
+  </div>
+</div>
+{% endblock %}
