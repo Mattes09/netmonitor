@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}{{ device.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+    <li class="breadcrumb-item active">{{ device.name }}</li>
+  </ol>
+</nav>
+
+<!-- Device header card -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+      <div>
+        <h3 class="mb-1">
+          <i class="bi bi-hdd-network me-2 text-primary"></i>{{ device.name }}
+        </h3>
+        <p class="text-muted mb-0">
+          <code>{{ device.ip_address }}</code>
+          &nbsp;&bull;&nbsp;
+          <span class="badge bg-secondary">{{ device.device_type }}</span>
+          {% if device.ssh_username %}
+            &nbsp;&bull;&nbsp;
+            <span class="text-muted small"><i class="bi bi-terminal me-1"></i>SSH: {{ device.ssh_username }}</span>
+          {% endif %}
+        </p>
+      </div>
+
+      <div class="d-flex gap-2 align-items-center">
+        {% if history %}
+          {% set latest = history[0] %}
+          {% if latest.status == 'online' %}
+            <span class="badge bg-success fs-6 px-3 py-2"><i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Online</span>
+          {% elif latest.status == 'offline' %}
+            <span class="badge bg-danger fs-6 px-3 py-2"><i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Offline</span>
+          {% endif %}
+        {% else %}
+          <span class="badge bg-warning text-dark fs-6 px-3 py-2">Unknown</span>
+        {% endif %}
+
+        <form method="post" action="/device/{{ device.id }}/check">
+          <button class="btn btn-primary">
+            <i class="bi bi-activity me-1"></i>Check Now
+          </button>
+        </form>
+
+        <form method="post" action="/device/{{ device.id }}/delete"
+              onsubmit="return confirm('Delete {{ device.name }}?')">
+          <button class="btn btn-outline-danger">
+            <i class="bi bi-trash me-1"></i>Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats row -->
+{% if history %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-3">
+    <div class="card shadow-sm text-center py-3">
+      <div class="fs-3 fw-bold {% if uptime >= 90 %}text-success{% elif uptime >= 50 %}text-warning{% else %}text-danger{% endif %}">
+        {{ uptime }}%
+      </div>
+      <div class="text-muted small">Uptime (last {{ history|length }} checks)</div>
+    </div>
+  </div>
+  {% set rt_values = history | selectattr('response_time') | map(attribute='response_time') | list %}
+  {% if rt_values %}
+  <div class="col-sm-3">
+    <div class="card shadow-sm text-center py-3">
+      <div class="fs-3 fw-bold text-primary">{{ "%.1f"|format(rt_values | min) }} ms</div>
+      <div class="text-muted small">Best Response</div>
+    </div>
+  </div>
+  <div class="col-sm-3">
+    <div class="card shadow-sm text-center py-3">
+      <div class="fs-3 fw-bold text-primary">
+        {{ "%.1f"|format((rt_values | sum) / (rt_values | length)) }} ms
+      </div>
+      <div class="text-muted small">Avg Response</div>
+    </div>
+  </div>
+  <div class="col-sm-3">
+    <div class="card shadow-sm text-center py-3">
+      <div class="fs-3 fw-bold text-primary">{{ "%.1f"|format(rt_values | max) }} ms</div>
+      <div class="text-muted small">Worst Response</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Ping history table -->
+<div class="card shadow-sm">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <strong><i class="bi bi-clock-history me-2"></i>Ping History</strong>
+    <span class="badge bg-secondary">Last {{ history | length }} records</span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Status</th>
+          <th>Response Time</th>
+          <th>Checked At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in history %}
+        <tr>
+          <td class="text-muted">{{ loop.index }}</td>
+          <td>
+            {% if record.status == 'online' %}
+              <span class="badge bg-success">Online</span>
+            {% else %}
+              <span class="badge bg-danger">Offline</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if record.response_time %}
+              <span class="{% if record.response_time < 50 %}text-success{% elif record.response_time < 200 %}text-warning{% else %}text-danger{% endif %}">
+                {{ "%.1f"|format(record.response_time) }} ms
+              </span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ record.checked_at }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="text-center text-muted py-4">
+            No history yet. Click <strong>Check Now</strong> above to run the first ping.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,8 +1,40 @@
-{% extends "base.html" %} {% block title %}Dashboard{% endblock %} {% block
-content %}
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h1><i class="bi bi-speedometer2"></i> Network Dashboard</h1>
-  <span class="badge bg-secondary"> {{devices | length }} devices </span>
+  <div>
+    <h2 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Network Dashboard</h2>
+    <small class="text-muted">Live status of all monitored devices (auto-refresh every 60 s)</small>
+  </div>
+  <a href="/device/add" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Add Device
+  </a>
+</div>
+
+{% set online_count  = devices | selectattr('status', 'equalto', 'online')  | list | length %}
+{% set offline_count = devices | selectattr('status', 'equalto', 'offline') | list | length %}
+{% set unknown_count = devices | length - online_count - offline_count %}
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card shadow-sm text-center py-3">
+      <div class="fs-1 text-success fw-bold">{{ online_count }}</div>
+      <div class="text-muted small">Online</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card shadow-sm text-center py-3">
+      <div class="fs-1 text-danger fw-bold">{{ offline_count }}</div>
+      <div class="text-muted small">Offline</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card shadow-sm text-center py-3">
+      <div class="fs-1 text-secondary fw-bold">{{ devices | length }}</div>
+      <div class="text-muted small">Total Devices</div>
+    </div>
+  </div>
 </div>
 
 <div class="card shadow-sm">
@@ -15,31 +47,64 @@ content %}
           <th>IP Address</th>
           <th>Type</th>
           <th>Status</th>
+          <th>Response Time</th>
           <th>Last Checked</th>
-          <th>Actions</th>
+          <th class="text-end">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for device in devices %}
         <tr>
-          <td>{{device.id}}</td>
-          <td><strong> {{device.name}}</strong></td>
-          <td><code> {{device.ip_address}}</code></td>
-          <td>{{device.device_type}}</td>
+          <td class="text-muted">{{ device.id }}</td>
           <td>
-            {% if device.status =="online" %}
-            <span class="badge bg-success">● Online</span>
-            {% elif device.status =="offline" %}
-            <span class="badge bg-danger">● Offline</span>
+            <a href="/device/{{ device.id }}" class="text-decoration-none fw-semibold">
+              {{ device.name }}
+            </a>
+          </td>
+          <td><code>{{ device.ip_address }}</code></td>
+          <td><span class="badge bg-secondary">{{ device.device_type }}</span></td>
+          <td>
+            {% if device.status == 'online' %}
+              <span class="badge bg-success ping-badge"><i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Online</span>
+            {% elif device.status == 'offline' %}
+              <span class="badge bg-danger ping-badge"><i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Offline</span>
             {% else %}
-            <span class="badge bg-warning text-dark">● Unknown</span>
+              <span class="badge bg-warning text-dark ping-badge"><i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Unknown</span>
             {% endif %}
           </td>
-          <td>{{ device.last_checked }}</td>
           <td>
-            <button class="btn btn-sm btn-outline-primary" disabled>
-              <i class="bi bi-activity"></i> Check
-            </button>
+            {% if device.response_time %}
+              <span class="{% if device.response_time < 50 %}text-success{% elif device.response_time < 200 %}text-warning{% else %}text-danger{% endif %}">
+                {{ "%.1f"|format(device.response_time) }} ms
+              </span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">
+            {{ device.last_checked if device.last_checked else 'Never' }}
+          </td>
+          <td class="text-end">
+            <form method="post" action="/device/{{ device.id }}/check" class="d-inline">
+              <button class="btn btn-sm btn-outline-primary" title="Ping now">
+                <i class="bi bi-activity"></i>
+              </button>
+            </form>
+            <a href="/device/{{ device.id }}" class="btn btn-sm btn-outline-secondary" title="History">
+              <i class="bi bi-clock-history"></i>
+            </a>
+            <form method="post" action="/device/{{ device.id }}/delete" class="d-inline"
+                  onsubmit="return confirm('Delete {{ device.name }}?')">
+              <button class="btn btn-sm btn-outline-danger" title="Delete">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">
+            No devices yet. <a href="/device/add">Add one now.</a>
           </td>
         </tr>
         {% endfor %}
@@ -47,10 +112,15 @@ content %}
     </table>
   </div>
 </div>
-<p class="text-muted mt-3">
-  <small>
-    <i class="bi bi-info-circle"></i>
-    Monitoring features coming soon. Buttons are placeholders for now.
-  </small>
+
+<p class="text-muted mt-3 small">
+  <i class="bi bi-info-circle me-1"></i>
+  Background monitor checks all devices every 60 seconds. Click
+  <i class="bi bi-activity"></i> to trigger an immediate check.
 </p>
+
+<script>
+  // Auto-refresh the page every 60 seconds
+  setTimeout(() => location.reload(), 60000);
+</script>
 {% endblock %}
