@@ -3,7 +3,7 @@ from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeo
 
 from config import SECRET_KEY
 from models import get_db, init_db, seed_devices
-from monitor import ping_host, start_monitor
+from monitor import check_host, ping_host, start_monitor
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -126,7 +126,7 @@ def check_device(device_id):
     conn.close()
 
     if device:
-        status, response_time = ping_host(device['ip_address'])
+        status, response_time = check_host(device['ip_address'])
         conn = get_db()
         conn.execute(
             'INSERT INTO ping_history (device_id, status, response_time) VALUES (?, ?, ?)',

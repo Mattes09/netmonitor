@@ -1,7 +1,9 @@
 import platform
 import re
+import socket
 import subprocess
 import threading
+import time
 
 from config import PING_INTERVAL
 from models import get_db
@@ -38,6 +40,36 @@ def ping_host(ip_address):
         return 'offline', None
 
 
+def tcp_check(host, port=22, timeout=5):
+    """Attempt a TCP connection to host:port. Returns (success, response_time_ms | None)."""
+    try:
+        start = time.monotonic()
+        with socket.create_connection((host, port), timeout=timeout):
+            elapsed = (time.monotonic() - start) * 1000
+            return True, round(elapsed, 2)
+    except Exception:
+        return False, None
+
+
+def check_host(ip_address):
+    """Check host reachability: ICMP ping first, TCP port 22 as fallback.
+
+    Returns (status, response_time_ms | None).
+    """
+    status, response_time = ping_host(ip_address)
+    if status == 'online':
+        return status, response_time
+
+    # ICMP failed — fall back to TCP port 22
+    print(f'[monitor] ICMP ping failed for {ip_address}, falling back to TCP port 22')
+    tcp_ok, tcp_time = tcp_check(ip_address)
+    if tcp_ok:
+        print(f'[monitor] TCP port 22 reachable for {ip_address} ({tcp_time} ms) — marking online')
+        return 'online', tcp_time
+
+    return 'offline', None
+
+
 def check_all_devices():
     """Ping every device in the database and record the result."""
     conn = get_db()
@@ -45,7 +77,7 @@ def check_all_devices():
     conn.close()
 
     for device in devices:
-        status, response_time = ping_host(device['ip_address'])
+        status, response_time = check_host(device['ip_address'])
         conn = get_db()
         conn.execute(
             'INSERT INTO ping_history (device_id, status, response_time) VALUES (?, ?, ?)',
