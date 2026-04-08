@@ -134,5 +134,14 @@
 <script>
   // Auto-refresh the page every 60 seconds
   setTimeout(() => location.reload(), 60000);
+
+  // Ping button loading state
+  document.querySelectorAll('form[action$="/check"]').forEach(form => {
+    form.addEventListener('submit', function () {
+      const btn = this.querySelector('button');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Pinging…';
+    });
+  });
 </script>
 {% endblock %}
