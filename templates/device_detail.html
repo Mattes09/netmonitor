@@ -60,6 +60,9 @@
         <a href="/device/{{ device.id }}/backups" class="btn btn-outline-secondary">
           <i class="bi bi-archive me-1"></i>Backups
         </a>
+        <a href="/device/{{ device.id }}/audit" class="btn btn-success">
+          <i class="bi bi-shield-check me-1"></i>Run Compliance Audit
+        </a>
         {% endif %}
 
         <form method="post" action="/device/{{ device.id }}/delete"

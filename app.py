@@ -1,6 +1,7 @@
 from flask import Flask, flash, redirect, render_template, request, url_for
 from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeoutException
 
+from audit import audit_config
 from config import SECRET_KEY
 from models import get_db, init_db, seed_devices
 from monitor import check_host, ping_host, start_monitor
@@ -272,6 +273,37 @@ def backup_detail(device_id, backup_id):
         return redirect(url_for('dashboard'))
 
     return render_template('backup_detail.html', device=device, backup=backup)
+
+
+# ---------------------------------------------------------------------------
+# Compliance audit (latest config backup)
+# ---------------------------------------------------------------------------
+
+@app.route('/device/<int:device_id>/audit')
+def device_audit(device_id):
+    db = get_db()
+    device = db.execute('SELECT * FROM devices WHERE id = ?', (device_id,)).fetchone()
+    if not device:
+        db.close()
+        flash('Device not found.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    backup = db.execute(
+        'SELECT * FROM config_backups WHERE device_id = ? '
+        'ORDER BY created_at DESC, id DESC LIMIT 1',
+        (device_id,),
+    ).fetchone()
+    db.close()
+
+    if not backup:
+        flash('Capture a configuration backup before running an audit.', 'warning')
+        return redirect(url_for('device_detail', device_id=device_id))
+
+    results, summary = audit_config(backup['config_text'])
+    return render_template(
+        'audit_result.html',
+        device=device, backup=backup, results=results, summary=summary,
+    )
 
 
 # ---------------------------------------------------------------------------

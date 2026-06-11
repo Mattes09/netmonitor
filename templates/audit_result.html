@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Compliance Audit — {{ device.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="/device/{{ device.id }}">{{ device.name }}</a></li>
+    <li class="breadcrumb-item active">Compliance Audit</li>
+  </ol>
+</nav>
+
+<!-- Summary card -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+    <span>
+      <i class="bi bi-shield-check me-2"></i>Compliance Audit
+      &nbsp;&mdash;&nbsp;{{ device.name }}
+      <span class="badge bg-secondary ms-2">{{ device.ip_address }}</span>
+      <span class="badge bg-info text-dark ms-1">Backup: {{ backup.created_at }}</span>
+    </span>
+    <div class="d-flex gap-2">
+      <a href="/device/{{ device.id }}/backups" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-archive me-1"></i>Backups
+      </a>
+      <a href="/device/{{ device.id }}" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-arrow-left me-1"></i>Device
+      </a>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-2">
+      <div>
+        <span class="fs-3 fw-bold {% if summary.score >= 90 %}text-success{% elif summary.score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+          {{ summary.score }}%
+        </span>
+        <span class="text-muted">compliant ({{ summary.passed }}/{{ summary.total }} checks passed)</span>
+      </div>
+      <div class="d-flex gap-2">
+        {% if summary.failed_high %}
+          <span class="badge bg-danger fs-6">{{ summary.failed_high }} high</span>
+        {% endif %}
+        {% if summary.failed_medium %}
+          <span class="badge bg-warning text-dark fs-6">{{ summary.failed_medium }} medium</span>
+        {% endif %}
+        {% if summary.failed_low %}
+          <span class="badge bg-secondary fs-6">{{ summary.failed_low }} low</span>
+        {% endif %}
+        {% if not summary.failed %}
+          <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>All checks passed</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="progress" style="height: 1.5rem;">
+      <div class="progress-bar {% if summary.score >= 90 %}bg-success{% elif summary.score >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+           role="progressbar" style="width: {{ summary.score }}%;"
+           aria-valuenow="{{ summary.score }}" aria-valuemin="0" aria-valuemax="100">
+        {{ summary.score }}%
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Results table -->
+<div class="card shadow-sm">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <strong><i class="bi bi-list-check me-2"></i>Rule Results</strong>
+    <span class="badge bg-secondary">{{ summary.total }} rules</span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover table-sm mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Rule</th>
+          <th>Category</th>
+          <th>Severity</th>
+          <th>Status</th>
+          <th>Detail</th>
+          <th>Remediation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td>{{ r.title }}</td>
+          <td class="text-muted small">{{ r.category }}</td>
+          <td>
+            {% if r.severity == 'high' %}
+              <span class="badge bg-danger">High</span>
+            {% elif r.severity == 'medium' %}
+              <span class="badge bg-warning text-dark">Medium</span>
+            {% else %}
+              <span class="badge bg-secondary">Low</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.status == 'pass' %}
+              <span class="badge bg-success">Pass</span>
+            {% else %}
+              <span class="badge bg-danger">Fail</span>
+            {% endif %}
+          </td>
+          <td><code class="small">{{ r.detail }}</code></td>
+          <td class="text-muted small">{{ r.remediation }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
