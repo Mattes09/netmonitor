@@ -1,6 +1,7 @@
 from flask import Flask, flash, redirect, render_template, request, url_for
 from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeoutException
 
+from api import api as api_blueprint
 from audit import audit_config
 from config import SECRET_KEY
 from models import get_db, init_db, seed_devices
@@ -8,6 +9,7 @@ from monitor import check_host, ping_host, start_monitor
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
+app.register_blueprint(api_blueprint)
 
 
 # ---------------------------------------------------------------------------
