@@ -2,7 +2,7 @@ import sqlite3
 
 from flask import Blueprint, jsonify, request, url_for
 
-from models import create_device, get_all_devices, get_device, update_device, validate_device_data
+from models import create_device, delete_device, get_all_devices, get_device, update_device, validate_device_data
 
 # Read-only JSON API. Mounted under /api/v1 (see app.py).
 api = Blueprint('api', __name__, url_prefix='/api/v1')
@@ -123,3 +123,13 @@ def update_device_json(id):
         return jsonify({'error': 'a device with this IP address already exists'}), 409
 
     return jsonify(device_to_json(get_device(id))), 200
+
+
+@api.route('/devices/<int:id>', methods=['DELETE'])
+def delete_device_json(id):
+    """Delete a device, or return a JSON 404 if it does not exist."""
+    device = get_device(id)
+    if device is None:
+        return jsonify({'error': 'device not found'}), 404
+    delete_device(id)
+    return '', 204
