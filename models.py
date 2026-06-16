@@ -137,6 +137,18 @@ def update_device(device_id, data):
     conn.close()
 
 
+def delete_device(device_id):
+    """Delete the device with *device_id*.
+
+    Child rows in ping_history and config_backups are removed automatically by
+    the ON DELETE CASCADE foreign keys.
+    """
+    conn = get_db()
+    conn.execute('DELETE FROM devices WHERE id = ?', (device_id,))
+    conn.commit()
+    conn.close()
+
+
 def get_device(device_id):
     """Return a single device row by id, or None if not found."""
     conn = get_db()

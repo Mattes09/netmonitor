@@ -14,6 +14,10 @@ from models import (
     update_device,
     validate_device_data,
 )
+# Aliased: the route view below is also named delete_device, and the route's
+# `def` rebinds the module global — without the alias the in-route call would
+# resolve to the view itself and recurse infinitely.
+from models import delete_device as delete_device_record
 from monitor import check_host, ping_host, start_monitor
 
 app = Flask(__name__)
@@ -155,10 +159,7 @@ def edit_device(device_id):
 def delete_device(device_id):
     device = get_device(device_id)
     if device:
-        conn = get_db()
-        conn.execute('DELETE FROM devices WHERE id = ?', (device_id,))
-        conn.commit()
-        conn.close()
+        delete_device_record(device_id)
         flash(f'Device "{device["name"]}" removed.', 'success')
     return redirect(url_for('dashboard'))
 
