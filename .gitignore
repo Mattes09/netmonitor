@@ -18,6 +18,8 @@ env/
 #Database
 *.db
 *sqlite3
+netmonitor.db-wal
+netmonitor.db-shm
 
 #OS files
 .DS_Store
