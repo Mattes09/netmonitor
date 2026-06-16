@@ -37,6 +37,33 @@ def get_all_devices():
     return rows
 
 
+def create_device(data):
+    """Insert a new device from *data* and return its new id.
+
+    *data* is a dict with keys: name, ip_address, device_type, ssh_username,
+    ssh_password, netmiko_device_type (some values may be None). sqlite3 errors
+    (e.g. a duplicate ip_address UNIQUE violation) propagate to the caller.
+    """
+    conn = get_db()
+    cursor = conn.execute(
+        'INSERT INTO devices '
+        '(name, ip_address, device_type, ssh_username, ssh_password, netmiko_device_type) '
+        'VALUES (?, ?, ?, ?, ?, ?)',
+        (
+            data['name'],
+            data['ip_address'],
+            data['device_type'],
+            data['ssh_username'],
+            data['ssh_password'],
+            data['netmiko_device_type'],
+        ),
+    )
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return new_id
+
+
 def get_device(device_id):
     """Return a single device row by id, or None if not found."""
     conn = get_db()
@@ -120,7 +147,7 @@ def seed_devices():
                 'devnetsandboxiosxec8k.cisco.com',
                 'Cisco IOS XE',
                 'm.madzin',
-                'szmF8H9Wf1--R',
+                '',  # Enter real SSH credentials via the Add/Edit Device UI
                 'cisco_xe',
             ),
         )

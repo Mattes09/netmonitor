@@ -56,10 +56,24 @@
                    placeholder="admin" autocomplete="off">
           </div>
 
-          <div class="mb-4">
+          <div class="mb-3">
             <label for="ssh_password" class="form-label fw-semibold">SSH Password</label>
             <input type="password" class="form-control" id="ssh_password" name="ssh_password"
                    autocomplete="new-password">
+          </div>
+
+          <div class="mb-4">
+            <label for="netmiko_device_type" class="form-label fw-semibold">Netmiko Driver</label>
+            <select class="form-select" id="netmiko_device_type" name="netmiko_device_type">
+              <option value="" selected>— None (ping-only device) —</option>
+              <option value="cisco_ios">Cisco IOS</option>
+              <option value="cisco_xe">Cisco IOS-XE</option>
+              <option value="cisco_nxos">Cisco NX-OS (Nexus)</option>
+              <option value="cisco_asa">Cisco ASA</option>
+              <option value="cisco_xr">Cisco IOS-XR</option>
+              <option value="arista_eos">Arista EOS</option>
+              <option value="juniper_junos">Juniper Junos</option>
+            </select>
           </div>
 
           <div class="d-flex gap-2">

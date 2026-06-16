@@ -4,7 +4,7 @@ from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeo
 from api import api as api_blueprint
 from audit import audit_config
 from config import SECRET_KEY
-from models import get_all_devices, get_db, get_device, init_db, seed_devices
+from models import create_device, get_all_devices, get_db, get_device, init_db, seed_devices
 from monitor import check_host, ping_host, start_monitor
 
 app = Flask(__name__)
@@ -57,31 +57,31 @@ def device_detail(device_id):
 @app.route('/device/add', methods=['GET', 'POST'])
 def add_device():
     if request.method == 'POST':
-        name         = request.form.get('name', '').strip()
-        ip_address   = request.form.get('ip_address', '').strip()
-        device_type  = request.form.get('device_type', 'Unknown').strip() or 'Unknown'
-        ssh_username = request.form.get('ssh_username', '').strip() or None
-        ssh_password = request.form.get('ssh_password', '').strip() or None
+        name                = request.form.get('name', '').strip()
+        ip_address          = request.form.get('ip_address', '').strip()
+        device_type         = request.form.get('device_type', 'Unknown').strip() or 'Unknown'
+        ssh_username        = request.form.get('ssh_username', '').strip() or None
+        ssh_password        = request.form.get('ssh_password', '').strip() or None
+        netmiko_device_type = request.form.get('netmiko_device_type', '').strip() or None
 
         if not name or not ip_address:
             flash('Device name and IP address are required.', 'danger')
             return render_template('add_device.html')
 
-        conn = get_db()
         try:
-            conn.execute(
-                'INSERT INTO devices (name, ip_address, device_type, ssh_username, ssh_password) '
-                'VALUES (?, ?, ?, ?, ?)',
-                (name, ip_address, device_type, ssh_username, ssh_password),
-            )
-            conn.commit()
+            create_device({
+                'name': name,
+                'ip_address': ip_address,
+                'device_type': device_type,
+                'ssh_username': ssh_username,
+                'ssh_password': ssh_password,
+                'netmiko_device_type': netmiko_device_type,
+            })
             flash(f'Device "{name}" added successfully.', 'success')
             return redirect(url_for('dashboard'))
         except Exception:
             flash('Could not add device — IP address may already exist.', 'danger')
             return render_template('add_device.html')
-        finally:
-            conn.close()
 
     return render_template('add_device.html')
 
