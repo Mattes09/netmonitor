@@ -1,6 +1,8 @@
-from flask import Blueprint, jsonify
+import sqlite3
 
-from models import get_all_devices, get_device
+from flask import Blueprint, jsonify, request, url_for
+
+from models import create_device, get_all_devices, get_device, validate_device_data
 
 # Read-only JSON API. Mounted under /api/v1 (see app.py).
 api = Blueprint('api', __name__, url_prefix='/api/v1')
@@ -34,6 +36,42 @@ def list_devices():
     """
     rows = get_all_devices()
     return jsonify([device_to_json(row) for row in rows])
+
+
+def _norm(value):
+    """Strip strings; leave other types (incl. None) untouched."""
+    return value.strip() if isinstance(value, str) else value
+
+
+@api.route('/devices', methods=['POST'])
+def create_device_json():
+    """Create a device from a JSON body. Mirrors the web Add Device form."""
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({'error': 'request body must be valid JSON'}), 400
+
+    device = {
+        'name': _norm(data.get('name')),
+        'ip_address': _norm(data.get('ip_address')),
+        'device_type': _norm(data.get('device_type')) or 'Unknown',
+        'ssh_username': _norm(data.get('ssh_username')) or None,
+        'ssh_password': _norm(data.get('ssh_password')) or None,
+        'netmiko_device_type': _norm(data.get('netmiko_device_type')) or None,
+    }
+
+    errors = validate_device_data(device)
+    if errors:
+        return jsonify({'errors': errors}), 400
+
+    try:
+        new_id = create_device(device)
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'a device with this IP address already exists'}), 409
+
+    new_row = get_device(new_id)
+    response = jsonify(device_to_json(new_row))
+    response.headers['Location'] = url_for('api.get_device_json', id=new_id)
+    return response, 201
 
 
 @api.route('/devices/<int:id>')
