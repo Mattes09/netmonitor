@@ -9,6 +9,34 @@ def get_db():
     return conn
 
 
+def get_all_devices():
+    """Return all devices with their latest ping status.
+
+    LEFT JOINs each device to its most recent ping_history row, so devices
+    with no ping history are still returned (with a null status). Selects
+    every device column (d.*) plus the latest status, response_time and
+    checked_at — the shared "list devices" query used by the dashboard and
+    the JSON API.
+    """
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT d.*,
+               ph.status,
+               ph.response_time,
+               ph.checked_at AS last_checked
+        FROM devices d
+        LEFT JOIN ping_history ph ON ph.id = (
+            SELECT id FROM ping_history
+            WHERE device_id = d.id
+            ORDER BY checked_at DESC
+            LIMIT 1
+        )
+        ORDER BY d.name
+    ''').fetchall()
+    conn.close()
+    return rows
+
+
 def init_db():
     conn = get_db()
     c = conn.cursor()

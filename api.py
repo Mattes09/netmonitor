@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 
-from models import get_db
+from models import get_all_devices
 
 # Read-only JSON API. Mounted under /api/v1 (see app.py).
 api = Blueprint('api', __name__, url_prefix='/api/v1')
@@ -14,23 +14,7 @@ def list_devices():
     row per device — the same logic the dashboard uses. SSH credentials
     (ssh_username / ssh_password) are deliberately excluded.
     """
-    conn = get_db()
-    rows = conn.execute('''
-        SELECT d.id,
-               d.name,
-               d.ip_address,
-               d.netmiko_device_type,
-               ph.status
-        FROM devices d
-        LEFT JOIN ping_history ph ON ph.id = (
-            SELECT id FROM ping_history
-            WHERE device_id = d.id
-            ORDER BY checked_at DESC
-            LIMIT 1
-        )
-        ORDER BY d.name
-    ''').fetchall()
-    conn.close()
+    rows = get_all_devices()
 
     devices = [
         {

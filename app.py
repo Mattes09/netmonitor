@@ -4,7 +4,7 @@ from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeo
 from api import api as api_blueprint
 from audit import audit_config
 from config import SECRET_KEY
-from models import get_db, init_db, seed_devices
+from models import get_all_devices, get_db, init_db, seed_devices
 from monitor import check_host, ping_host, start_monitor
 
 app = Flask(__name__)
@@ -18,22 +18,7 @@ app.register_blueprint(api_blueprint)
 
 @app.route('/')
 def dashboard():
-    conn = get_db()
-    devices = conn.execute('''
-        SELECT d.*,
-               ph.status,
-               ph.response_time,
-               ph.checked_at AS last_checked
-        FROM devices d
-        LEFT JOIN ping_history ph ON ph.id = (
-            SELECT id FROM ping_history
-            WHERE device_id = d.id
-            ORDER BY checked_at DESC
-            LIMIT 1
-        )
-        ORDER BY d.name
-    ''').fetchall()
-    conn.close()
+    devices = get_all_devices()
     return render_template('dashboard.html', devices=devices)
 
 
