@@ -2,7 +2,7 @@ import sqlite3
 
 from flask import Blueprint, jsonify, request, url_for
 
-from models import create_device, get_all_devices, get_device, validate_device_data
+from models import create_device, get_all_devices, get_device, update_device, validate_device_data
 
 # Read-only JSON API. Mounted under /api/v1 (see app.py).
 api = Blueprint('api', __name__, url_prefix='/api/v1')
@@ -81,3 +81,45 @@ def get_device_json(id):
     if device is None:
         return jsonify({'error': 'device not found'}), 404
     return jsonify(device_to_json(device))
+
+
+@api.route('/devices/<int:id>', methods=['PUT'])
+def update_device_json(id):
+    """Full-replace update of a device's editable fields.
+
+    Exception: ssh_password follows the password-keep rule — a missing
+    'ssh_password' key keeps the stored value (an explicit empty value clears it).
+    """
+    existing = get_device(id)
+    if existing is None:
+        return jsonify({'error': 'device not found'}), 404
+
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({'error': 'request body must be valid JSON'}), 400
+
+    # Password-keep rule: key on PRESENCE, not truthiness.
+    if 'ssh_password' in data:
+        ssh_password = _norm(data.get('ssh_password')) or None
+    else:
+        ssh_password = existing['ssh_password']
+
+    device = {
+        'name': _norm(data.get('name')),
+        'ip_address': _norm(data.get('ip_address')),
+        'device_type': _norm(data.get('device_type')) or 'Unknown',
+        'ssh_username': _norm(data.get('ssh_username')) or None,
+        'ssh_password': ssh_password,
+        'netmiko_device_type': _norm(data.get('netmiko_device_type')) or None,
+    }
+
+    errors = validate_device_data(device)
+    if errors:
+        return jsonify({'errors': errors}), 400
+
+    try:
+        update_device(id, device)
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'a device with this IP address already exists'}), 409
+
+    return jsonify(device_to_json(get_device(id))), 200
