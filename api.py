@@ -1,3 +1,5 @@
+import hmac
+import os
 import sqlite3
 
 from flask import Blueprint, jsonify, request, url_for
@@ -6,6 +8,27 @@ from models import create_device, delete_device, get_all_devices, get_device, up
 
 # Read-only JSON API. Mounted under /api/v1 (see app.py).
 api = Blueprint('api', __name__, url_prefix='/api/v1')
+
+
+@api.before_request
+def require_api_key():
+    """Reject any /api/v1 request lacking a valid Bearer API key.
+
+    The expected key is read from NETMONITOR_API_KEY (never hardcoded —
+    the repo is public). If no key is configured on the server, the API
+    fails closed (500) rather than serving requests unprotected.
+    """
+    expected = os.environ.get('NETMONITOR_API_KEY')
+    if not expected:
+        return jsonify({'error': 'API key not configured on server'}), 500
+
+    auth = request.headers.get('Authorization', '')
+    if not auth.startswith('Bearer '):
+        return jsonify({'error': 'unauthorized'}), 401, {'WWW-Authenticate': 'Bearer'}
+
+    provided = auth[7:].strip()
+    if not hmac.compare_digest(provided.encode('utf-8'), expected.encode('utf-8')):
+        return jsonify({'error': 'unauthorized'}), 401, {'WWW-Authenticate': 'Bearer'}
 
 
 def device_to_json(row):
