@@ -37,6 +37,14 @@ def get_all_devices():
     return rows
 
 
+def get_device(device_id):
+    """Return a single device row by id, or None if not found."""
+    conn = get_db()
+    row = conn.execute('SELECT * FROM devices WHERE id = ?', (device_id,)).fetchone()
+    conn.close()
+    return row
+
+
 def init_db():
     conn = get_db()
     c = conn.cursor()

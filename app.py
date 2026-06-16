@@ -4,7 +4,7 @@ from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeo
 from api import api as api_blueprint
 from audit import audit_config
 from config import SECRET_KEY
-from models import get_all_devices, get_db, init_db, seed_devices
+from models import get_all_devices, get_db, get_device, init_db, seed_devices
 from monitor import check_host, ping_host, start_monitor
 
 app = Flask(__name__)
@@ -28,13 +28,12 @@ def dashboard():
 
 @app.route('/device/<int:device_id>')
 def device_detail(device_id):
-    conn = get_db()
-    device = conn.execute('SELECT * FROM devices WHERE id = ?', (device_id,)).fetchone()
+    device = get_device(device_id)
     if not device:
-        conn.close()
         flash('Device not found.', 'danger')
         return redirect(url_for('dashboard'))
 
+    conn = get_db()
     history = conn.execute('''
         SELECT * FROM ping_history
         WHERE device_id = ?
@@ -93,13 +92,13 @@ def add_device():
 
 @app.route('/device/<int:device_id>/delete', methods=['POST'])
 def delete_device(device_id):
-    conn = get_db()
-    device = conn.execute('SELECT name FROM devices WHERE id = ?', (device_id,)).fetchone()
+    device = get_device(device_id)
     if device:
+        conn = get_db()
         conn.execute('DELETE FROM devices WHERE id = ?', (device_id,))
         conn.commit()
+        conn.close()
         flash(f'Device "{device["name"]}" removed.', 'success')
-    conn.close()
     return redirect(url_for('dashboard'))
 
 
@@ -109,9 +108,7 @@ def delete_device(device_id):
 
 @app.route('/device/<int:device_id>/check', methods=['POST'])
 def check_device(device_id):
-    conn = get_db()
-    device = conn.execute('SELECT * FROM devices WHERE id = ?', (device_id,)).fetchone()
-    conn.close()
+    device = get_device(device_id)
 
     if device:
         status, response_time = check_host(device['ip_address'])
@@ -133,13 +130,6 @@ def check_device(device_id):
 # SSH helpers
 # ---------------------------------------------------------------------------
 
-def _get_device_or_404(device_id):
-    conn = get_db()
-    device = conn.execute('SELECT * FROM devices WHERE id = ?', (device_id,)).fetchone()
-    conn.close()
-    return device
-
-
 def _ssh_connect(device):
     """Return a Netmiko ConnectHandler for *device*, or raise on failure."""
     return ConnectHandler(
@@ -156,7 +146,7 @@ def _ssh_connect(device):
 
 @app.route('/device/<int:device_id>/connect', methods=['POST'])
 def device_connect(device_id):
-    device = _get_device_or_404(device_id)
+    device = get_device(device_id)
     if not device:
         flash('Device not found.', 'danger')
         return redirect(url_for('dashboard'))
@@ -187,7 +177,7 @@ def device_connect(device_id):
 
 @app.route('/device/<int:device_id>/backup', methods=['POST'])
 def device_backup(device_id):
-    device = _get_device_or_404(device_id)
+    device = get_device(device_id)
     if not device:
         flash('Device not found.', 'danger')
         return redirect(url_for('dashboard'))
@@ -229,13 +219,12 @@ def device_backup(device_id):
 
 @app.route('/device/<int:device_id>/backups')
 def device_backups(device_id):
-    db = get_db()
-    device = db.execute('SELECT * FROM devices WHERE id = ?', (device_id,)).fetchone()
+    device = get_device(device_id)
     if not device:
-        db.close()
         flash('Device not found.', 'danger')
         return redirect(url_for('dashboard'))
 
+    db = get_db()
     backups = db.execute(
         'SELECT id, device_id, created_at, length(config_text) AS size '
         'FROM config_backups WHERE device_id = ? ORDER BY created_at DESC',
@@ -247,8 +236,8 @@ def device_backups(device_id):
 
 @app.route('/device/<int:device_id>/backups/<int:backup_id>')
 def backup_detail(device_id, backup_id):
+    device = get_device(device_id)
     db = get_db()
-    device = db.execute('SELECT * FROM devices WHERE id = ?', (device_id,)).fetchone()
     backup = db.execute(
         'SELECT * FROM config_backups WHERE id = ? AND device_id = ?',
         (backup_id, device_id),
@@ -268,13 +257,12 @@ def backup_detail(device_id, backup_id):
 
 @app.route('/device/<int:device_id>/audit')
 def device_audit(device_id):
-    db = get_db()
-    device = db.execute('SELECT * FROM devices WHERE id = ?', (device_id,)).fetchone()
+    device = get_device(device_id)
     if not device:
-        db.close()
         flash('Device not found.', 'danger')
         return redirect(url_for('dashboard'))
 
+    db = get_db()
     backup = db.execute(
         'SELECT * FROM config_backups WHERE device_id = ? '
         'ORDER BY created_at DESC, id DESC LIMIT 1',
