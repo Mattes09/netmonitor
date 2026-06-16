@@ -38,12 +38,12 @@ COMPLIANCE_RULES = [
     },
     {
         'id': 'no_enable_password',
-        'title': 'No plaintext enable password',
+        'title': 'Avoid `enable password` (use `enable secret`)',
         'category': 'Password security',
         'severity': 'medium',
         'check': 'must_not_contain',
         'pattern': r'^enable password\b',
-        'remediation': 'Remove `enable password`; use `enable secret`.',
+        'remediation': 'Replace `enable password` with `enable secret`: `enable password` is reversible (type 0 or type 7), whereas `enable secret` is stored as a one-way hash.',
     },
     {
         'id': 'vty_ssh',
