@@ -1,3 +1,5 @@
+import sqlite3
+
 from flask import Flask, flash, redirect, render_template, request, url_for
 from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeoutException
 
@@ -96,8 +98,11 @@ def add_device():
             create_device(data)
             flash(f'Device "{name}" added successfully.', 'success')
             return redirect(url_for('dashboard'))
+        except sqlite3.IntegrityError:
+            flash('Could not add device — a device with this IP address already exists.', 'danger')
+            return render_template('add_device.html')
         except Exception:
-            flash('Could not add device — IP address may already exist.', 'danger')
+            flash('Could not add device — an unexpected error occurred.', 'danger')
             return render_template('add_device.html')
 
     return render_template('add_device.html')
@@ -144,8 +149,11 @@ def edit_device(device_id):
             update_device(device_id, data)
             flash('Device updated successfully.', 'success')
             return redirect(url_for('device_detail', device_id=device_id))
+        except sqlite3.IntegrityError:
+            flash('Could not update device — a device with this IP address already exists.', 'danger')
+            return render_template('edit_device.html', device=device)
         except Exception:
-            flash('Could not update device — IP address may already exist.', 'danger')
+            flash('Could not update device — an unexpected error occurred.', 'danger')
             return render_template('edit_device.html', device=device)
 
     return render_template('edit_device.html', device=device)
