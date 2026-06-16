@@ -1,6 +1,7 @@
 import platform
 import re
 import socket
+import sqlite3
 import subprocess
 import threading
 import time
@@ -79,17 +80,28 @@ def check_all_devices():
     for device in devices:
         status, response_time = check_host(device['ip_address'])
         conn = get_db()
-        conn.execute(
-            'INSERT INTO ping_history (device_id, status, response_time) VALUES (?, ?, ?)',
-            (device['id'], status, response_time),
-        )
-        conn.commit()
-        conn.close()
+        try:
+            conn.execute(
+                'INSERT INTO ping_history (device_id, status, response_time) VALUES (?, ?, ?)',
+                (device['id'], status, response_time),
+            )
+            conn.commit()
+        except sqlite3.IntegrityError:
+            # Device was deleted mid-cycle (FOREIGN KEY constraint failed). Expected.
+            print(f'[monitor] device {device["id"]} no longer exists, skipping')
+        except Exception as exc:
+            # e.g. OperationalError 'database is locked' — transient, keep going.
+            print(f'[monitor] failed to record ping for device {device["id"]}: {exc}')
+        finally:
+            conn.close()
 
 
 def _monitor_loop():
     while not _stop_event.is_set():
-        check_all_devices()
+        try:
+            check_all_devices()
+        except Exception as exc:
+            print(f'[monitor] monitoring cycle failed: {exc}')
         _stop_event.wait(PING_INTERVAL)
 
 
