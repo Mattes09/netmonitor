@@ -1,3 +1,5 @@
+import ipaddress
+import re
 import sqlite3
 from config import DATABASE
 
@@ -37,6 +39,51 @@ def get_all_devices():
     return rows
 
 
+_HOSTNAME_LABEL = re.compile(r'^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$')
+
+
+def _is_valid_address(value):
+    """Return True if *value* is a valid IP address (v4/v6) or hostname."""
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        pass
+
+    # Treat as a hostname.
+    if len(value) > 253:
+        return False
+    labels = value.split('.')
+    if not all(_HOSTNAME_LABEL.match(label) for label in labels):
+        return False
+    # Reject IP-like strings whose last label is all digits (e.g. 1.2.3.4.5).
+    if labels[-1].isdigit():
+        return False
+    return True
+
+
+def validate_device_data(data):
+    """Validate device *data*; return a list of error strings ([] = valid).
+
+    Only name and ip_address are required — SSH fields and the Netmiko driver
+    are optional.
+    """
+    errors = []
+    if not (data.get('name') or '').strip():
+        errors.append('Device name is required.')
+
+    ip_address = (data.get('ip_address') or '').strip()
+    if not ip_address:
+        errors.append('IP address or hostname is required.')
+    elif not _is_valid_address(ip_address):
+        errors.append(
+            'Address must be a valid IP address or hostname '
+            '(e.g. 192.168.1.1 or switch.example.com).'
+        )
+
+    return errors
+
+
 def create_device(data):
     """Insert a new device from *data* and return its new id.
 
@@ -62,6 +109,32 @@ def create_device(data):
     new_id = cursor.lastrowid
     conn.close()
     return new_id
+
+
+def update_device(device_id, data):
+    """Update all six columns of the device with *device_id* from *data*.
+
+    sqlite3 errors (e.g. a duplicate ip_address UNIQUE violation) propagate to
+    the caller. Symmetric with create_device.
+    """
+    conn = get_db()
+    conn.execute(
+        'UPDATE devices SET '
+        'name = ?, ip_address = ?, device_type = ?, '
+        'ssh_username = ?, ssh_password = ?, netmiko_device_type = ? '
+        'WHERE id = ?',
+        (
+            data['name'],
+            data['ip_address'],
+            data['device_type'],
+            data['ssh_username'],
+            data['ssh_password'],
+            data['netmiko_device_type'],
+            device_id,
+        ),
+    )
+    conn.commit()
+    conn.close()
 
 
 def get_device(device_id):

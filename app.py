@@ -4,7 +4,16 @@ from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeo
 from api import api as api_blueprint
 from audit import audit_config
 from config import SECRET_KEY
-from models import create_device, get_all_devices, get_db, get_device, init_db, seed_devices
+from models import (
+    create_device,
+    get_all_devices,
+    get_db,
+    get_device,
+    init_db,
+    seed_devices,
+    update_device,
+    validate_device_data,
+)
 from monitor import check_host, ping_host, start_monitor
 
 app = Flask(__name__)
@@ -64,19 +73,23 @@ def add_device():
         ssh_password        = request.form.get('ssh_password', '').strip() or None
         netmiko_device_type = request.form.get('netmiko_device_type', '').strip() or None
 
-        if not name or not ip_address:
-            flash('Device name and IP address are required.', 'danger')
+        data = {
+            'name': name,
+            'ip_address': ip_address,
+            'device_type': device_type,
+            'ssh_username': ssh_username,
+            'ssh_password': ssh_password,
+            'netmiko_device_type': netmiko_device_type,
+        }
+
+        errors = validate_device_data(data)
+        if errors:
+            for e in errors:
+                flash(e, 'danger')
             return render_template('add_device.html')
 
         try:
-            create_device({
-                'name': name,
-                'ip_address': ip_address,
-                'device_type': device_type,
-                'ssh_username': ssh_username,
-                'ssh_password': ssh_password,
-                'netmiko_device_type': netmiko_device_type,
-            })
+            create_device(data)
             flash(f'Device "{name}" added successfully.', 'success')
             return redirect(url_for('dashboard'))
         except Exception:
@@ -84,6 +97,54 @@ def add_device():
             return render_template('add_device.html')
 
     return render_template('add_device.html')
+
+
+# ---------------------------------------------------------------------------
+# Edit device
+# ---------------------------------------------------------------------------
+
+@app.route('/device/<int:device_id>/edit', methods=['GET', 'POST'])
+def edit_device(device_id):
+    device = get_device(device_id)
+    if not device:
+        flash('Device not found.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        name                = request.form.get('name', '').strip()
+        ip_address          = request.form.get('ip_address', '').strip()
+        device_type         = request.form.get('device_type', 'Unknown').strip() or 'Unknown'
+        ssh_username        = request.form.get('ssh_username', '').strip() or None
+        netmiko_device_type = request.form.get('netmiko_device_type', '').strip() or None
+
+        # Blank password field = keep the existing password (form never pre-fills it).
+        pw_input = request.form.get('ssh_password', '').strip()
+        ssh_password = pw_input if pw_input else device['ssh_password']
+
+        data = {
+            'name': name,
+            'ip_address': ip_address,
+            'device_type': device_type,
+            'ssh_username': ssh_username,
+            'ssh_password': ssh_password,
+            'netmiko_device_type': netmiko_device_type,
+        }
+
+        errors = validate_device_data(data)
+        if errors:
+            for e in errors:
+                flash(e, 'danger')
+            return render_template('edit_device.html', device=device)
+
+        try:
+            update_device(device_id, data)
+            flash('Device updated successfully.', 'success')
+            return redirect(url_for('device_detail', device_id=device_id))
+        except Exception:
+            flash('Could not update device — IP address may already exist.', 'danger')
+            return render_template('edit_device.html', device=device)
+
+    return render_template('edit_device.html', device=device)
 
 
 # ---------------------------------------------------------------------------

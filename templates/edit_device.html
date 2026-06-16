@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Edit Device{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="/device/{{ device.id }}">{{ device.name }}</a></li>
+    <li class="breadcrumb-item active">Edit</li>
+  </ol>
+</nav>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="bi bi-pencil me-2 text-primary"></i>Edit Device</h5>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/device/{{ device.id }}/edit" novalidate>
+
+          <div class="mb-3">
+            <label for="name" class="form-label fw-semibold">Device Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="name" name="name"
+                   value="{{ device.name }}" placeholder="e.g. Core Switch 1" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="ip_address" class="form-label fw-semibold">IP Address <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="ip_address" name="ip_address"
+                   value="{{ device.ip_address }}" placeholder="e.g. 192.168.1.1" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="device_type" class="form-label fw-semibold">Device Type</label>
+            <select class="form-select" id="device_type" name="device_type">
+              <option value="Unknown" {% if device.device_type == 'Unknown' %}selected{% endif %}>Unknown</option>
+              <option value="Router" {% if device.device_type == 'Router' %}selected{% endif %}>Router</option>
+              <option value="Switch" {% if device.device_type == 'Switch' %}selected{% endif %}>Switch</option>
+              <option value="Firewall" {% if device.device_type == 'Firewall' %}selected{% endif %}>Firewall</option>
+              <option value="Server" {% if device.device_type == 'Server' %}selected{% endif %}>Server</option>
+              <option value="Virtual Machine" {% if device.device_type == 'Virtual Machine' %}selected{% endif %}>Virtual Machine</option>
+              <option value="DNS Server" {% if device.device_type == 'DNS Server' %}selected{% endif %}>DNS Server</option>
+              <option value="Access Point" {% if device.device_type == 'Access Point' %}selected{% endif %}>Access Point</option>
+              <option value="Other" {% if device.device_type == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+
+          <hr class="my-3">
+          <p class="text-muted small mb-3">
+            <i class="bi bi-lock me-1"></i>SSH credentials are optional — used for future configuration backup features.
+          </p>
+
+          <div class="mb-3">
+            <label for="ssh_username" class="form-label fw-semibold">SSH Username</label>
+            <input type="text" class="form-control" id="ssh_username" name="ssh_username"
+                   value="{{ device.ssh_username or '' }}" placeholder="admin" autocomplete="off">
+          </div>
+
+          <div class="mb-3">
+            <label for="ssh_password" class="form-label fw-semibold">SSH Password</label>
+            <input type="password" class="form-control" id="ssh_password" name="ssh_password"
+                   autocomplete="new-password">
+            <div class="form-text">Leave blank to keep the current password.</div>
+          </div>
+
+          <div class="mb-4">
+            <label for="netmiko_device_type" class="form-label fw-semibold">Netmiko Driver</label>
+            <select class="form-select" id="netmiko_device_type" name="netmiko_device_type">
+              <option value="" {% if not device.netmiko_device_type %}selected{% endif %}>— None (ping-only device) —</option>
+              <option value="cisco_ios" {% if device.netmiko_device_type == 'cisco_ios' %}selected{% endif %}>Cisco IOS</option>
+              <option value="cisco_xe" {% if device.netmiko_device_type == 'cisco_xe' %}selected{% endif %}>Cisco IOS-XE</option>
+              <option value="cisco_nxos" {% if device.netmiko_device_type == 'cisco_nxos' %}selected{% endif %}>Cisco NX-OS (Nexus)</option>
+              <option value="cisco_asa" {% if device.netmiko_device_type == 'cisco_asa' %}selected{% endif %}>Cisco ASA</option>
+              <option value="cisco_xr" {% if device.netmiko_device_type == 'cisco_xr' %}selected{% endif %}>Cisco IOS-XR</option>
+              <option value="arista_eos" {% if device.netmiko_device_type == 'arista_eos' %}selected{% endif %}>Arista EOS</option>
+              <option value="juniper_junos" {% if device.netmiko_device_type == 'juniper_junos' %}selected{% endif %}>Juniper Junos</option>
+            </select>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i>Save Changes
+            </button>
+            <a href="/device/{{ device.id }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
