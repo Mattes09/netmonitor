@@ -221,8 +221,11 @@ def device_connect(device_id):
         flash('Device not found.', 'danger')
         return redirect(url_for('dashboard'))
 
-    if not device['ssh_username'] or not device['netmiko_device_type']:
+    if not device['ssh_username'] or not device['ssh_password']:
         flash('This device has no SSH credentials configured.', 'warning')
+        return redirect(url_for('device_detail', device_id=device_id))
+    if not device['netmiko_device_type']:
+        flash('This device has no device type set — choose a Netmiko driver to enable SSH.', 'warning')
         return redirect(url_for('device_detail', device_id=device_id))
 
     try:
@@ -232,7 +235,7 @@ def device_connect(device_id):
         flash('SSH authentication failed — check credentials.', 'danger')
         return redirect(url_for('device_detail', device_id=device_id))
     except NetmikoTimeoutException:
-        flash('SSH connection timed out — device may be unreachable.', 'danger')
+        flash('SSH connection failed — no response from the device. It may be offline, unreachable, or refusing the connection.', 'danger')
         return redirect(url_for('device_detail', device_id=device_id))
     except Exception as exc:
         flash(f'SSH error: {exc}', 'danger')
@@ -252,8 +255,11 @@ def device_backup(device_id):
         flash('Device not found.', 'danger')
         return redirect(url_for('dashboard'))
 
-    if not device['ssh_username'] or not device['netmiko_device_type']:
+    if not device['ssh_username'] or not device['ssh_password']:
         flash('This device has no SSH credentials configured.', 'warning')
+        return redirect(url_for('device_detail', device_id=device_id))
+    if not device['netmiko_device_type']:
+        flash('This device has no device type set — choose a Netmiko driver to enable SSH.', 'warning')
         return redirect(url_for('device_detail', device_id=device_id))
 
     try:
@@ -263,7 +269,7 @@ def device_backup(device_id):
         flash('SSH authentication failed — check credentials.', 'danger')
         return redirect(url_for('device_detail', device_id=device_id))
     except NetmikoTimeoutException:
-        flash('SSH connection timed out — device may be unreachable.', 'danger')
+        flash('SSH connection failed — no response from the device. It may be offline, unreachable, or refusing the connection.', 'danger')
         return redirect(url_for('device_detail', device_id=device_id))
     except Exception as exc:
         flash(f'SSH error: {exc}', 'danger')
