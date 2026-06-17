@@ -33,3 +33,4 @@ backups/*.txt
 
 #Byte-compiled
 *.pyc
+CODE_OVERVIEW.md
