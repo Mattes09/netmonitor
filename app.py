@@ -92,7 +92,7 @@ def add_device():
         if errors:
             for e in errors:
                 flash(e, 'danger')
-            return render_template('add_device.html')
+            return render_template('add_device.html', form=data)
 
         try:
             create_device(data)
@@ -100,12 +100,12 @@ def add_device():
             return redirect(url_for('dashboard'))
         except sqlite3.IntegrityError:
             flash('Could not add device — a device with this IP address already exists.', 'danger')
-            return render_template('add_device.html')
+            return render_template('add_device.html', form=data)
         except Exception:
             flash('Could not add device — an unexpected error occurred.', 'danger')
-            return render_template('add_device.html')
+            return render_template('add_device.html', form=data)
 
-    return render_template('add_device.html')
+    return render_template('add_device.html', form={})
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ def edit_device(device_id):
         if errors:
             for e in errors:
                 flash(e, 'danger')
-            return render_template('edit_device.html', device=device)
+            return render_template('edit_device.html', device=device, form=data)
 
         try:
             update_device(device_id, data)
@@ -151,12 +151,12 @@ def edit_device(device_id):
             return redirect(url_for('device_detail', device_id=device_id))
         except sqlite3.IntegrityError:
             flash('Could not update device — a device with this IP address already exists.', 'danger')
-            return render_template('edit_device.html', device=device)
+            return render_template('edit_device.html', device=device, form=data)
         except Exception:
             flash('Could not update device — an unexpected error occurred.', 'danger')
-            return render_template('edit_device.html', device=device)
+            return render_template('edit_device.html', device=device, form=data)
 
-    return render_template('edit_device.html', device=device)
+    return render_template('edit_device.html', device=device, form=dict(device))
 
 
 # ---------------------------------------------------------------------------

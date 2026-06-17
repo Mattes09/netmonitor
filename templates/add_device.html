@@ -21,39 +21,39 @@
           <div class="mb-3">
             <label for="name" class="form-label fw-semibold">Device Name <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="name" name="name"
-                   placeholder="e.g. Core Switch 1" required>
+                   value="{{ form.name or '' }}" placeholder="e.g. Core Switch 1" required>
           </div>
 
           <div class="mb-3">
             <label for="ip_address" class="form-label fw-semibold">IP Address <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="ip_address" name="ip_address"
-                   placeholder="e.g. 192.168.1.1" required>
+                   value="{{ form.ip_address or '' }}" placeholder="e.g. 192.168.1.1" required>
           </div>
 
           <div class="mb-3">
             <label for="device_type" class="form-label fw-semibold">Device Type</label>
             <select class="form-select" id="device_type" name="device_type">
-              <option value="Unknown">Unknown</option>
-              <option value="Router">Router</option>
-              <option value="Switch">Switch</option>
-              <option value="Firewall">Firewall</option>
-              <option value="Server">Server</option>
-              <option value="Virtual Machine">Virtual Machine</option>
-              <option value="DNS Server">DNS Server</option>
-              <option value="Access Point">Access Point</option>
-              <option value="Other">Other</option>
+              <option value="Unknown" {% if not form.device_type or form.device_type == 'Unknown' %}selected{% endif %}>Unknown</option>
+              <option value="Router" {% if form.device_type == 'Router' %}selected{% endif %}>Router</option>
+              <option value="Switch" {% if form.device_type == 'Switch' %}selected{% endif %}>Switch</option>
+              <option value="Firewall" {% if form.device_type == 'Firewall' %}selected{% endif %}>Firewall</option>
+              <option value="Server" {% if form.device_type == 'Server' %}selected{% endif %}>Server</option>
+              <option value="Virtual Machine" {% if form.device_type == 'Virtual Machine' %}selected{% endif %}>Virtual Machine</option>
+              <option value="DNS Server" {% if form.device_type == 'DNS Server' %}selected{% endif %}>DNS Server</option>
+              <option value="Access Point" {% if form.device_type == 'Access Point' %}selected{% endif %}>Access Point</option>
+              <option value="Other" {% if form.device_type == 'Other' %}selected{% endif %}>Other</option>
             </select>
           </div>
 
           <hr class="my-3">
           <p class="text-muted small mb-3">
-            <i class="bi bi-lock me-1"></i>SSH credentials are optional — used for future configuration backup features.
+            <i class="bi bi-lock me-1"></i>SSH credentials are optional — used for configuration backup and compliance auditing.
           </p>
 
           <div class="mb-3">
             <label for="ssh_username" class="form-label fw-semibold">SSH Username</label>
             <input type="text" class="form-control" id="ssh_username" name="ssh_username"
-                   placeholder="admin" autocomplete="off">
+                   value="{{ form.ssh_username or '' }}" placeholder="admin" autocomplete="off">
           </div>
 
           <div class="mb-3">
@@ -65,14 +65,14 @@
           <div class="mb-4">
             <label for="netmiko_device_type" class="form-label fw-semibold">Netmiko Driver</label>
             <select class="form-select" id="netmiko_device_type" name="netmiko_device_type">
-              <option value="" selected>— None (ping-only device) —</option>
-              <option value="cisco_ios">Cisco IOS</option>
-              <option value="cisco_xe">Cisco IOS-XE</option>
-              <option value="cisco_nxos">Cisco NX-OS (Nexus)</option>
-              <option value="cisco_asa">Cisco ASA</option>
-              <option value="cisco_xr">Cisco IOS-XR</option>
-              <option value="arista_eos">Arista EOS</option>
-              <option value="juniper_junos">Juniper Junos</option>
+              <option value="" {% if not form.netmiko_device_type %}selected{% endif %}>— None (ping-only device) —</option>
+              <option value="cisco_ios" {% if form.netmiko_device_type == 'cisco_ios' %}selected{% endif %}>Cisco IOS</option>
+              <option value="cisco_xe" {% if form.netmiko_device_type == 'cisco_xe' %}selected{% endif %}>Cisco IOS-XE</option>
+              <option value="cisco_nxos" {% if form.netmiko_device_type == 'cisco_nxos' %}selected{% endif %}>Cisco NX-OS (Nexus)</option>
+              <option value="cisco_asa" {% if form.netmiko_device_type == 'cisco_asa' %}selected{% endif %}>Cisco ASA</option>
+              <option value="cisco_xr" {% if form.netmiko_device_type == 'cisco_xr' %}selected{% endif %}>Cisco IOS-XR</option>
+              <option value="arista_eos" {% if form.netmiko_device_type == 'arista_eos' %}selected{% endif %}>Arista EOS</option>
+              <option value="juniper_junos" {% if form.netmiko_device_type == 'juniper_junos' %}selected{% endif %}>Juniper Junos</option>
             </select>
           </div>
 
