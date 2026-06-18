@@ -13,17 +13,31 @@ def get_db():
     return conn
 
 
-def get_all_devices():
-    """Return all devices with their latest ping status.
+def get_all_devices(sort_key='id'):
+    """Return all devices with their latest ping status, sorted by *sort_key*.
 
     LEFT JOINs each device to its most recent ping_history row, so devices
     with no ping history are still returned (with a null status). Selects
     every device column (d.*) plus the latest status, response_time and
     checked_at — the shared "list devices" query used by the dashboard and
     the JSON API.
+
+    sort_key is mapped through a whitelist to a safe ORDER BY fragment. An
+    ORDER BY column name cannot be a bound (?) parameter, so the user's input
+    is used only as a dictionary key — never interpolated into SQL — and any
+    unrecognised key falls back to 'id'. This is the safe way to do dynamic
+    sorting: values are parameterized, identifiers are whitelisted.
     """
+    sort_columns = {
+        'id':     'd.id',
+        'name':   'd.name COLLATE NOCASE',
+        'type':   'd.device_type COLLATE NOCASE',
+        'status': 'ph.status, d.id',
+    }
+    order_by = sort_columns.get(sort_key, 'd.id')
+
     conn = get_db()
-    rows = conn.execute('''
+    rows = conn.execute(f'''
         SELECT d.*,
                ph.status,
                ph.response_time,
@@ -35,7 +49,7 @@ def get_all_devices():
             ORDER BY checked_at DESC
             LIMIT 1
         )
-        ORDER BY d.name
+        ORDER BY {order_by}
     ''').fetchall()
     conn.close()
     return rows

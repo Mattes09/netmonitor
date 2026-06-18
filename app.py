@@ -33,8 +33,9 @@ app.register_blueprint(api_blueprint)
 
 @app.route('/')
 def dashboard():
-    devices = get_all_devices()
-    return render_template('dashboard.html', devices=devices)
+    sort_key = request.args.get('sort', 'id')
+    devices = get_all_devices(sort_key)
+    return render_template('dashboard.html', devices=devices, sort_key=sort_key)
 
 
 # ---------------------------------------------------------------------------
