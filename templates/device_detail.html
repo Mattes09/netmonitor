@@ -41,19 +41,19 @@
         {% endif %}
 
         <form method="post" action="/device/{{ device.id }}/check">
-          <button class="btn btn-primary">
+          <button class="btn btn-primary" data-loading="Checking…">
             <i class="bi bi-activity me-1"></i>Check Now
           </button>
         </form>
 
         {% if device.ssh_username %}
         <form method="post" action="/device/{{ device.id }}/connect">
-          <button class="btn btn-info text-white">
+          <button class="btn btn-info text-white" data-loading="Connecting…">
             <i class="bi bi-terminal me-1"></i>Connect
           </button>
         </form>
         <form method="post" action="/device/{{ device.id }}/backup">
-          <button class="btn btn-warning">
+          <button class="btn btn-warning" data-loading="Backing up…">
             <i class="bi bi-floppy me-1"></i>Backup Config
           </button>
         </form>

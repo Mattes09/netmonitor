@@ -86,7 +86,7 @@
           </td>
           <td class="text-end">
             <form method="post" action="/device/{{ device.id }}/check" class="d-inline">
-              <button class="btn btn-sm btn-outline-primary" title="Ping now">
+              <button class="btn btn-sm btn-outline-primary" title="Ping now" data-loading="…">
                 <i class="bi bi-activity"></i>
               </button>
             </form>
@@ -95,12 +95,12 @@
             </a>
             {% if device.ssh_username %}
             <form method="post" action="/device/{{ device.id }}/connect" class="d-inline">
-              <button class="btn btn-sm btn-outline-info" title="SSH: show version">
+              <button class="btn btn-sm btn-outline-info" title="SSH: show version" data-loading="…">
                 <i class="bi bi-terminal"></i>
               </button>
             </form>
             <form method="post" action="/device/{{ device.id }}/backup" class="d-inline">
-              <button class="btn btn-sm btn-outline-warning" title="Backup running-config">
+              <button class="btn btn-sm btn-outline-warning" title="Backup running-config" data-loading="…">
                 <i class="bi bi-floppy"></i>
               </button>
             </form>
@@ -134,14 +134,5 @@
 <script>
   // Auto-refresh the page every 60 seconds
   setTimeout(() => location.reload(), 60000);
-
-  // Ping button loading state
-  document.querySelectorAll('form[action$="/check"]').forEach(form => {
-    form.addEventListener('submit', function () {
-      const btn = this.querySelector('button');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Pinging…';
-    });
-  });
 </script>
 {% endblock %}
