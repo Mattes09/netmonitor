@@ -1,6 +1,7 @@
 import sqlite3
 
 from flask import Flask, flash, redirect, render_template, request, url_for
+from markupsafe import Markup
 from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeoutException
 
 from api import api as api_blueprint
@@ -20,7 +21,7 @@ from models import (
 # `def` rebinds the module global — without the alias the in-route call would
 # resolve to the view itself and recurse infinitely.
 from models import delete_device as delete_device_record
-from monitor import check_host, ping_host, start_monitor
+from monitor import check_host, start_monitor
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -192,7 +193,12 @@ def check_device(device_id):
         conn.close()
         level = 'success' if status == 'online' else 'warning'
         rt_str = f' — {response_time} ms' if response_time is not None else ''
-        flash(f'{device["name"]} is <strong>{status}</strong>{rt_str}', level)
+        # The flash banner no longer trusts raw HTML (see base.html), so this is
+        # the one message that opts back into markup deliberately: Markup.format
+        # keeps the static <strong> wrapper trusted while escaping every
+        # substituted value — including the user-supplied device name.
+        flash(Markup('{name} is <strong>{status}</strong>{rt}').format(
+            name=device['name'], status=status, rt=rt_str), level)
 
     return redirect(request.referrer or url_for('dashboard'))
 

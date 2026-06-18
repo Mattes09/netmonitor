@@ -6,7 +6,8 @@ from flask import Blueprint, jsonify, request, url_for
 
 from models import create_device, delete_device, get_all_devices, get_device, update_device, validate_device_data
 
-# Read-only JSON API. Mounted under /api/v1 (see app.py).
+# JSON CRUD API for devices: list/create/read/update/delete, Bearer-token
+# authenticated. Mounted under /api/v1 (see app.py).
 api = Blueprint('api', __name__, url_prefix='/api/v1')
 
 
@@ -66,12 +67,38 @@ def _norm(value):
     return value.strip() if isinstance(value, str) else value
 
 
+# Device fields that must be JSON strings (or null/absent) when supplied. The
+# web-form path always yields strings, but a JSON client can send a number,
+# bool, or array. Without this guard a non-string name/ip_address would reach
+# .strip() in validate_device_data and raise AttributeError → HTTP 500; here it
+# becomes a clean 400 client error instead. null stays allowed (treated as empty).
+_STRING_FIELDS = (
+    'name', 'ip_address', 'device_type',
+    'ssh_username', 'ssh_password', 'netmiko_device_type',
+)
+
+
+def _string_type_errors(data):
+    """Return a '<field> must be a string' error for each non-string, non-null field."""
+    return [
+        f'{field} must be a string'
+        for field in _STRING_FIELDS
+        if data.get(field) is not None and not isinstance(data.get(field), str)
+    ]
+
+
 @api.route('/devices', methods=['POST'])
 def create_device_json():
     """Create a device from a JSON body. Mirrors the web Add Device form."""
     data = request.get_json(silent=True)
     if data is None:
         return jsonify({'error': 'request body must be valid JSON'}), 400
+    if not isinstance(data, dict):
+        return jsonify({'error': 'request body must be a JSON object'}), 400
+
+    type_errors = _string_type_errors(data)
+    if type_errors:
+        return jsonify({'errors': type_errors}), 400
 
     device = {
         'name': _norm(data.get('name')),
@@ -120,6 +147,12 @@ def update_device_json(id):
     data = request.get_json(silent=True)
     if data is None:
         return jsonify({'error': 'request body must be valid JSON'}), 400
+    if not isinstance(data, dict):
+        return jsonify({'error': 'request body must be a JSON object'}), 400
+
+    type_errors = _string_type_errors(data)
+    if type_errors:
+        return jsonify({'errors': type_errors}), 400
 
     # Password-keep rule: key on PRESENCE, not truthiness.
     if 'ssh_password' in data:

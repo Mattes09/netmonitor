@@ -93,12 +93,16 @@ COMPLIANCE_RULES = [
     },
     {
         'id': 'logging_configured',
-        'title': 'Logging destination configured',
+        'title': 'Remote logging (syslog) destination configured',
         'category': 'Logging & time',
         'severity': 'low',
         'check': 'must_contain',
-        'pattern': r'^logging\s+\S+',
-        'remediation': 'Configure a syslog/logging destination.',
+        # Require a real remote syslog destination: `logging host <addr>` or the
+        # older bare `logging <IP>`. Must NOT pass on local-only logging such as
+        # `logging console/buffered/monitor/trap`, which configure on-box output
+        # or severity, not a remote collector.
+        'pattern': r'^logging\s+(host\s+\S+|\d{1,3}(\.\d{1,3}){3})\b',
+        'remediation': 'Configure a remote syslog destination, e.g. `logging host 192.0.2.50`.',
     },
     {
         'id': 'ntp_configured',

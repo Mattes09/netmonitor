@@ -28,7 +28,6 @@
 
 {% set online_count  = devices | selectattr('status', 'equalto', 'online')  | list | length %}
 {% set offline_count = devices | selectattr('status', 'equalto', 'offline') | list | length %}
-{% set unknown_count = devices | length - online_count - offline_count %}
 
 <div class="row g-3 mb-4">
   <div class="col-sm-4">
@@ -120,7 +119,7 @@
             </form>
             {% endif %}
             <form method="post" action="/device/{{ device.id }}/delete" class="d-inline"
-                  onsubmit="return confirm('Delete {{ device.name }}?')">
+                  data-name="{{ device.name }}">
               <button class="btn btn-sm btn-outline-danger" title="Delete">
                 <i class="bi bi-trash"></i>
               </button>

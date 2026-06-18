@@ -70,7 +70,7 @@
         </a>
 
         <form method="post" action="/device/{{ device.id }}/delete"
-              onsubmit="return confirm('Delete {{ device.name }}?')">
+              data-name="{{ device.name }}">
           <button class="btn btn-outline-danger">
             <i class="bi bi-trash me-1"></i>Delete
           </button>

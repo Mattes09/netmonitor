@@ -33,4 +33,7 @@ backups/*.txt
 
 #Byte-compiled
 *.pyc
+
+#Local-only dev/audit docs (not for the public repo)
 CODE_OVERVIEW.md
+AUDIT_FINDINGS.md
