@@ -4,7 +4,17 @@ import sqlite3
 
 from flask import Blueprint, jsonify, request, url_for
 
-from models import create_device, delete_device, get_all_devices, get_device, update_device, validate_device_data
+from models import (
+    create_device,
+    delete_device,
+    get_all_devices,
+    get_backup,
+    get_backups,
+    get_device,
+    get_ping_history,
+    update_device,
+    validate_device_data,
+)
 
 # JSON CRUD API for devices: list/create/read/update/delete, Bearer-token
 # authenticated. Mounted under /api/v1 (see app.py).
@@ -48,6 +58,34 @@ def device_to_json(row):
         'netmiko_device_type': row['netmiko_device_type'],
         'status': status,
     }
+
+
+def ping_to_json(row):
+    """Serialize a ping_history row to its public JSON shape."""
+    return {
+        'id': row['id'],
+        'status': row['status'],
+        'response_time': row['response_time'],
+        'checked_at': row['checked_at'],
+    }
+
+
+def backup_to_json(row, include_config=False):
+    """Serialize a config_backups row to its public JSON shape.
+
+    The single definition of the backup JSON shape. List rows carry a 'size'
+    (the length of config_text) and use the summary shape; the single-backup
+    view passes include_config=True to return the full 'config_text' instead.
+    """
+    data = {
+        'id': row['id'],
+        'created_at': row['created_at'],
+    }
+    if include_config:
+        data['config_text'] = row['config_text']
+    else:
+        data['size'] = row['size']
+    return data
 
 
 @api.route('/devices')
@@ -189,3 +227,44 @@ def delete_device_json(id):
         return jsonify({'error': 'device not found'}), 404
     delete_device(id)
     return '', 204
+
+
+@api.route('/devices/<int:device_id>/history')
+def get_device_history(device_id):
+    """Return a device's ping history (newest first), or a JSON 404.
+
+    The before_request hook already enforces Bearer auth on /api/v1/*.
+    """
+    if get_device(device_id) is None:
+        return jsonify({'error': 'device not found'}), 404
+    rows = get_ping_history(device_id)
+    return jsonify([ping_to_json(row) for row in rows])
+
+
+@api.route('/devices/<int:device_id>/backups')
+def get_device_backups(device_id):
+    """Return a device's config backups (summary, newest first), or a JSON 404.
+
+    Each entry carries the config size, not the full config_text — fetch a
+    single backup to read its contents.
+    """
+    if get_device(device_id) is None:
+        return jsonify({'error': 'device not found'}), 404
+    rows = get_backups(device_id)
+    return jsonify([backup_to_json(row) for row in rows])
+
+
+@api.route('/devices/<int:device_id>/backups/<int:backup_id>')
+def get_device_backup(device_id, backup_id):
+    """Return a single config backup (including config_text), or a JSON 404.
+
+    404 if the device does not exist, or if no backup with that id belongs to
+    it — the lookup is scoped to the device id, so another device's backup
+    cannot be read by guessing the id.
+    """
+    if get_device(device_id) is None:
+        return jsonify({'error': 'device not found'}), 404
+    backup = get_backup(device_id, backup_id)
+    if backup is None:
+        return jsonify({'error': 'backup not found'}), 404
+    return jsonify(backup_to_json(backup, include_config=True))

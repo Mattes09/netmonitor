@@ -173,6 +173,58 @@ def get_device(device_id):
     return row
 
 
+def get_ping_history(device_id, limit=100):
+    """Return a device's ping_history rows, newest first, capped at *limit*.
+
+    Mirrors the device-detail view (last 100, newest first). The cap keeps
+    responses bounded — ping_history grows by roughly one row per device per
+    minute. Returns a list of Row.
+    """
+    conn = get_db()
+    rows = conn.execute(
+        'SELECT id, status, response_time, checked_at '
+        'FROM ping_history WHERE device_id = ? '
+        'ORDER BY checked_at DESC, id DESC LIMIT ?',
+        (device_id, limit),
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def get_backups(device_id):
+    """Return a device's config_backups, newest first (summary only).
+
+    Selects id, created_at and length(config_text) AS size — NOT the full
+    config_text, so a backup listing stays small. Returns a list of Row.
+    """
+    conn = get_db()
+    rows = conn.execute(
+        'SELECT id, created_at, length(config_text) AS size '
+        'FROM config_backups WHERE device_id = ? '
+        'ORDER BY created_at DESC, id DESC',
+        (device_id,),
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def get_backup(device_id, backup_id):
+    """Return one config backup scoped to BOTH device_id and backup_id.
+
+    Scoping to the device id means another device's backup cannot be read by
+    guessing the backup id. Selects id, created_at and the full config_text.
+    Returns a Row, or None if not found.
+    """
+    conn = get_db()
+    row = conn.execute(
+        'SELECT id, created_at, config_text '
+        'FROM config_backups WHERE id = ? AND device_id = ?',
+        (backup_id, device_id),
+    ).fetchone()
+    conn.close()
+    return row
+
+
 def init_db():
     conn = get_db()
     c = conn.cursor()
