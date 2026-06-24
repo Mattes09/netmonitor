@@ -4,12 +4,15 @@ from flask import Flask, flash, redirect, render_template, request, url_for
 from markupsafe import Markup
 from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeoutException
 
+import drift
 from api import api as api_blueprint
 from audit import audit_config
 from config import SECRET_KEY
 from models import (
     create_device,
     get_all_devices,
+    get_backup,
+    get_backups,
     get_db,
     get_device,
     init_db,
@@ -361,6 +364,59 @@ def device_audit(device_id):
     return render_template(
         'audit_result.html',
         device=device, backup=backup, results=results, summary=summary,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Configuration drift (compare two config backups)
+# ---------------------------------------------------------------------------
+
+@app.route('/device/<int:device_id>/drift')
+def device_drift(device_id):
+    """Compare two of a device's stored config backups and show what changed.
+
+    Read-only: it diffs two already-captured backups and never contacts the
+    device. ?from=<older id>&to=<newer id> select the pair; both default to the
+    two most recent backups when missing or invalid.
+    """
+    device = get_device(device_id)
+    if not device:
+        flash('Device not found.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    # Summaries only (id, created_at, size) — never the full config_text — to
+    # populate the two selectors and compute the defaults.
+    backups = get_backups(device_id)
+    if len(backups) < 2:
+        return render_template(
+            'config_drift.html',
+            device=device, backups=backups, result=None,
+            from_id=None, to_id=None, from_created_at=None, to_created_at=None,
+        )
+
+    from_id = request.args.get('from', type=int)
+    to_id = request.args.get('to', type=int)
+
+    # get_backup is scoped to BOTH device_id and backup_id, so it returns None
+    # for a missing, non-existent or foreign id — that scoping is the security
+    # check. Any such id falls back to a default: from = second newest (older),
+    # to = newest (newer), so the diff reads older -> newer.
+    old_row = get_backup(device_id, from_id)
+    if old_row is None:
+        from_id = backups[1]['id']
+        old_row = get_backup(device_id, from_id)
+
+    new_row = get_backup(device_id, to_id)
+    if new_row is None:
+        to_id = backups[0]['id']
+        new_row = get_backup(device_id, to_id)
+
+    result = drift.compute_drift(old_row['config_text'], new_row['config_text'])
+    return render_template(
+        'config_drift.html',
+        device=device, backups=backups, result=result,
+        from_id=from_id, to_id=to_id,
+        from_created_at=old_row['created_at'], to_created_at=new_row['created_at'],
     )
 
 

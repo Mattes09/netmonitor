@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Config Drift — {{ device.name }}{% endblock %}
+
+{% block content %}
+<style>
+  /* Per-line diff view: monospace, each line keeps its own background so
+     additions/removals stand out. Long config lines wrap rather than scroll
+     sideways, mirroring the backup detail view. */
+  .drift-diff { font-family: var(--bs-font-monospace); font-size: .85rem;
+                max-height: 70vh; overflow-y: auto; background: #fff; }
+  .drift-line { white-space: pre-wrap; word-break: break-all;
+                padding: 0 .6rem; margin: 0; }
+</style>
+
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="/device/{{ device.id }}">{{ device.name }}</a></li>
+    <li class="breadcrumb-item"><a href="/device/{{ device.id }}/backups">Backups</a></li>
+    <li class="breadcrumb-item active">Config Drift</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Configuration Drift</h4>
+    <small class="text-muted">
+      {{ device.name }} &mdash; <code>{{ device.ip_address }}</code>
+    </small>
+  </div>
+  <a href="/device/{{ device.id }}/backups" class="btn btn-outline-secondary">
+    <i class="bi bi-archive me-1"></i>Back to Backups
+  </a>
+</div>
+
+{% if result is none %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    At least two backups are needed to detect drift. Capture another backup,
+    then come back to compare.
+  </div>
+{% else %}
+  <!-- Backup selectors -->
+  <form method="get" action="/device/{{ device.id }}/drift" class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-5">
+          <label for="from" class="form-label mb-1">Compare from (older)</label>
+          <select id="from" name="from" class="form-select">
+            {% for b in backups %}
+            <option value="{{ b.id }}" {% if b.id == from_id %}selected{% endif %}>
+              #{{ b.id }} &mdash; {{ b.created_at }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-5">
+          <label for="to" class="form-label mb-1">to (newer)</label>
+          <select id="to" name="to" class="form-select">
+            {% for b in backups %}
+            <option value="{{ b.id }}" {% if b.id == to_id %}selected{% endif %}>
+              #{{ b.id }} &mdash; {{ b.created_at }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2 d-grid">
+          <button type="submit" class="btn btn-primary" data-loading="Comparing…">
+            <i class="bi bi-arrow-left-right me-1"></i>Compare
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Summary -->
+  <p class="text-muted small mb-2">
+    <i class="bi bi-clock-history me-1"></i>
+    #{{ from_id }} ({{ from_created_at }}) &rarr; #{{ to_id }} ({{ to_created_at }})
+  </p>
+
+  {% if result.identical %}
+  <div class="alert alert-success">
+    <i class="bi bi-check-circle me-2"></i>
+    No drift detected — the two configurations are identical.
+  </div>
+  {% else %}
+  <div class="d-flex gap-2 mb-3">
+    <span class="badge bg-success fs-6">+{{ result.added }} lines added</span>
+    <span class="badge bg-danger fs-6">&minus;{{ result.removed }} lines removed</span>
+  </div>
+
+  <!-- Diff. Every config line is emitted through Jinja2 autoescaping (no
+       | safe filter anywhere) — backups can contain arbitrary characters. -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-white">
+      <strong><i class="bi bi-file-diff me-2"></i>Differences</strong>
+    </div>
+    <div class="card-body p-0">
+      <div class="drift-diff">
+        {% for line in result.lines %}
+          {% if line.kind == 'add' %}
+            <div class="drift-line bg-success-subtle text-success-emphasis">+ {{ line.text }}</div>
+          {% elif line.kind == 'remove' %}
+            <div class="drift-line bg-danger-subtle text-danger-emphasis">&minus; {{ line.text }}</div>
+          {% elif line.kind == 'hunk' %}
+            <div class="drift-line bg-body-secondary text-secondary">{{ line.text }}</div>
+          {% else %}
+            <div class="drift-line">  {{ line.text }}</div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

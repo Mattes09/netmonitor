@@ -17,11 +17,16 @@
       {{ device.name }} &mdash; <code>{{ device.ip_address }}</code>
     </small>
   </div>
-  <form method="post" action="/device/{{ device.id }}/backup">
-    <button class="btn btn-warning">
-      <i class="bi bi-floppy me-1"></i>Take New Backup
-    </button>
-  </form>
+  <div class="d-flex gap-2">
+    <a href="/device/{{ device.id }}/drift" class="btn btn-outline-primary">
+      <i class="bi bi-arrow-left-right me-1"></i>Detect configuration drift
+    </a>
+    <form method="post" action="/device/{{ device.id }}/backup">
+      <button class="btn btn-warning">
+        <i class="bi bi-floppy me-1"></i>Take New Backup
+      </button>
+    </form>
+  </div>
 </div>
 
 <div class="card shadow-sm">

@@ -4,6 +4,7 @@ import sqlite3
 
 from flask import Blueprint, jsonify, request, url_for
 
+from drift import compute_drift
 from models import (
     create_device,
     delete_device,
@@ -268,3 +269,45 @@ def get_device_backup(device_id, backup_id):
     if backup is None:
         return jsonify({'error': 'backup not found'}), 404
     return jsonify(backup_to_json(backup, include_config=True))
+
+
+@api.route('/devices/<int:device_id>/drift')
+def get_device_drift(device_id):
+    """Return the config drift between two of a device's backups, or a JSON error.
+
+    Optional ?from=<older id>&to=<newer id> select the pair; both default to the
+    two most recent backups when missing or invalid. Mirrors the web
+    /device/<id>/drift view. get_backup is scoped to the device id, so a
+    missing/foreign id returns None and falls back to a default — that scoping
+    is the security check. Only the structured diff is returned, never the full
+    config_text.
+    """
+    if get_device(device_id) is None:
+        return jsonify({'error': 'device not found'}), 404
+
+    backups = get_backups(device_id)
+    if len(backups) < 2:
+        return jsonify({'error': 'at least two backups are required to compute drift'}), 400
+
+    from_id = request.args.get('from', type=int)
+    to_id = request.args.get('to', type=int)
+
+    # Default: from = second newest (older), to = newest (newer), so the diff
+    # reads older -> newer.
+    old_row = get_backup(device_id, from_id)
+    if old_row is None:
+        old_row = get_backup(device_id, backups[1]['id'])
+    new_row = get_backup(device_id, to_id)
+    if new_row is None:
+        new_row = get_backup(device_id, backups[0]['id'])
+
+    result = compute_drift(old_row['config_text'], new_row['config_text'])
+    return jsonify({
+        'device_id': device_id,
+        'from': {'id': old_row['id'], 'created_at': old_row['created_at']},
+        'to': {'id': new_row['id'], 'created_at': new_row['created_at']},
+        'identical': result['identical'],
+        'added': result['added'],
+        'removed': result['removed'],
+        'diff': result['lines'],
+    })
