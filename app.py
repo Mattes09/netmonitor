@@ -9,12 +9,15 @@ from api import api as api_blueprint
 from audit import audit_config
 from config import SECRET_KEY
 from models import (
+    add_backup,
+    add_ping_result,
     create_device,
     get_all_devices,
     get_backup,
     get_backups,
-    get_db,
     get_device,
+    get_latest_backup,
+    get_ping_history,
     init_db,
     seed_devices,
     update_device,
@@ -53,20 +56,13 @@ def device_detail(device_id):
         flash('Device not found.', 'danger')
         return redirect(url_for('dashboard'))
 
-    conn = get_db()
-    history = conn.execute('''
-        SELECT * FROM ping_history
-        WHERE device_id = ?
-        ORDER BY checked_at DESC
-        LIMIT 100
-    ''', (device_id,)).fetchall()
+    history = get_ping_history(device_id, limit=100)
 
     uptime = None
     if history:
         online_count = sum(1 for r in history if r['status'] == 'online')
         uptime = round(online_count / len(history) * 100, 1)
 
-    conn.close()
     return render_template('device_detail.html', device=device, history=history, uptime=uptime)
 
 
@@ -187,13 +183,7 @@ def check_device(device_id):
 
     if device:
         status, response_time = check_host(device['ip_address'])
-        conn = get_db()
-        conn.execute(
-            'INSERT INTO ping_history (device_id, status, response_time) VALUES (?, ?, ?)',
-            (device_id, status, response_time),
-        )
-        conn.commit()
-        conn.close()
+        add_ping_result(device_id, status, response_time)
         level = 'success' if status == 'online' else 'warning'
         rt_str = f' — {response_time} ms' if response_time is not None else ''
         # The flash banner no longer trusts raw HTML (see base.html), so this is
@@ -285,15 +275,7 @@ def device_backup(device_id):
         flash(f'SSH error: {exc}', 'danger')
         return redirect(url_for('device_detail', device_id=device_id))
 
-    db = get_db()
-    cursor = db.execute(
-        'INSERT INTO config_backups (device_id, config_text) VALUES (?, ?)',
-        (device_id, config_text),
-    )
-    db.commit()
-    backup_id = cursor.lastrowid
-    backup = db.execute('SELECT * FROM config_backups WHERE id = ?', (backup_id,)).fetchone()
-    db.close()
+    backup = add_backup(device_id, config_text)
 
     flash(f'Config backup saved successfully.', 'success')
     return render_template('backup_detail.html', device=device, backup=backup)
@@ -310,25 +292,14 @@ def device_backups(device_id):
         flash('Device not found.', 'danger')
         return redirect(url_for('dashboard'))
 
-    db = get_db()
-    backups = db.execute(
-        'SELECT id, device_id, created_at, length(config_text) AS size '
-        'FROM config_backups WHERE device_id = ? ORDER BY created_at DESC',
-        (device_id,),
-    ).fetchall()
-    db.close()
+    backups = get_backups(device_id)
     return render_template('backup_list.html', device=device, backups=backups)
 
 
 @app.route('/device/<int:device_id>/backups/<int:backup_id>')
 def backup_detail(device_id, backup_id):
     device = get_device(device_id)
-    db = get_db()
-    backup = db.execute(
-        'SELECT * FROM config_backups WHERE id = ? AND device_id = ?',
-        (backup_id, device_id),
-    ).fetchone()
-    db.close()
+    backup = get_backup(device_id, backup_id)
 
     if not device or not backup:
         flash('Backup not found.', 'danger')
@@ -348,13 +319,7 @@ def device_audit(device_id):
         flash('Device not found.', 'danger')
         return redirect(url_for('dashboard'))
 
-    db = get_db()
-    backup = db.execute(
-        'SELECT * FROM config_backups WHERE device_id = ? '
-        'ORDER BY created_at DESC, id DESC LIMIT 1',
-        (device_id,),
-    ).fetchone()
-    db.close()
+    backup = get_latest_backup(device_id)
 
     if not backup:
         flash('Capture a configuration backup before running an audit.', 'warning')

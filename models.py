@@ -191,6 +191,21 @@ def get_ping_history(device_id, limit=100):
     return rows
 
 
+def add_ping_result(device_id, status, response_time):
+    """Insert one ping result for *device_id*.
+
+    checked_at is left to its DEFAULT CURRENT_TIMESTAMP — never set explicitly —
+    matching the manual-check and background-monitor inserts. Commits, no return.
+    """
+    conn = get_db()
+    conn.execute(
+        'INSERT INTO ping_history (device_id, status, response_time) VALUES (?, ?, ?)',
+        (device_id, status, response_time),
+    )
+    conn.commit()
+    conn.close()
+
+
 def get_backups(device_id):
     """Return a device's config_backups, newest first (summary only).
 
@@ -220,6 +235,44 @@ def get_backup(device_id, backup_id):
         'SELECT id, created_at, config_text '
         'FROM config_backups WHERE id = ? AND device_id = ?',
         (backup_id, device_id),
+    ).fetchone()
+    conn.close()
+    return row
+
+
+def add_backup(device_id, config_text):
+    """Insert one config backup for *device_id* and return the new row.
+
+    created_at is left to its DEFAULT CURRENT_TIMESTAMP. Returns the full new
+    row (SELECT *: id, device_id, config_text, created_at) so the caller can
+    render it immediately — backup_detail.html shows config_text and created_at.
+    """
+    conn = get_db()
+    cursor = conn.execute(
+        'INSERT INTO config_backups (device_id, config_text) VALUES (?, ?)',
+        (device_id, config_text),
+    )
+    conn.commit()
+    row = conn.execute(
+        'SELECT * FROM config_backups WHERE id = ?',
+        (cursor.lastrowid,),
+    ).fetchone()
+    conn.close()
+    return row
+
+
+def get_latest_backup(device_id):
+    """Return a device's single most recent config backup, or None.
+
+    The created_at DESC, id DESC tie-break makes "latest" deterministic when two
+    backups share a created_at timestamp — the audit view relies on it. Selects
+    the full row (SELECT *), including config_text, for the audit.
+    """
+    conn = get_db()
+    row = conn.execute(
+        'SELECT * FROM config_backups WHERE device_id = ? '
+        'ORDER BY created_at DESC, id DESC LIMIT 1',
+        (device_id,),
     ).fetchone()
     conn.close()
     return row
