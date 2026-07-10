@@ -201,13 +201,19 @@ def check_device(device_id):
 # ---------------------------------------------------------------------------
 
 def _ssh_connect(device):
-    """Return a Netmiko ConnectHandler for *device*, or raise on failure."""
-    return ConnectHandler(
+    """Return a Netmiko ConnectHandler for *device* in privileged EXEC, or
+    raise on failure. enable() only elevates the read session; it does not
+    modify the device."""
+    conn = ConnectHandler(
         device_type=device['netmiko_device_type'],
         host=device['ip_address'],
         username=device['ssh_username'],
         password=device['ssh_password'],
+        secret=device['ssh_password'],
     )
+    if not conn.check_enable_mode():
+        conn.enable()
+    return conn
 
 
 # ---------------------------------------------------------------------------
@@ -273,6 +279,13 @@ def device_backup(device_id):
         return redirect(url_for('device_detail', device_id=device_id))
     except Exception as exc:
         flash(f'SSH error: {exc}', 'danger')
+        return redirect(url_for('device_detail', device_id=device_id))
+
+    error_markers = ('% Invalid input', '% Incomplete command',
+                     '% Ambiguous command')
+    if (any(m in config_text for m in error_markers)
+            or len(config_text.strip()) < 200):
+        flash('Config backup failed — the device did not return a valid configuration.', 'danger')
         return redirect(url_for('device_detail', device_id=device_id))
 
     backup = add_backup(device_id, config_text)
