@@ -62,6 +62,13 @@
                    autocomplete="new-password">
           </div>
 
+          <div class="mb-3">
+            <label for="enable_secret" class="form-label fw-semibold">Enable Secret</label>
+            <input type="password" class="form-control" id="enable_secret" name="enable_secret"
+                   autocomplete="new-password">
+            <div class="form-text">Only needed if the device's enable password differs from the SSH password. Leave blank to reuse the SSH password.</div>
+          </div>
+
           <div class="mb-4">
             <label for="netmiko_device_type" class="form-label fw-semibold">Netmiko Driver</label>
             <select class="form-select" id="netmiko_device_type" name="netmiko_device_type">

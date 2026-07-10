@@ -78,6 +78,7 @@ def add_device():
         device_type         = request.form.get('device_type', 'Unknown').strip() or 'Unknown'
         ssh_username        = request.form.get('ssh_username', '').strip() or None
         ssh_password        = request.form.get('ssh_password', '').strip() or None
+        enable_secret       = request.form.get('enable_secret', '').strip() or None
         netmiko_device_type = request.form.get('netmiko_device_type', '').strip() or None
 
         data = {
@@ -86,6 +87,7 @@ def add_device():
             'device_type': device_type,
             'ssh_username': ssh_username,
             'ssh_password': ssh_password,
+            'enable_secret': enable_secret,
             'netmiko_device_type': netmiko_device_type,
         }
 
@@ -131,12 +133,17 @@ def edit_device(device_id):
         pw_input = request.form.get('ssh_password', '').strip()
         ssh_password = pw_input if pw_input else device['ssh_password']
 
+        # Blank enable-secret field = keep the existing secret (form never pre-fills it).
+        es_input = request.form.get('enable_secret', '').strip()
+        enable_secret = es_input if es_input else device['enable_secret']
+
         data = {
             'name': name,
             'ip_address': ip_address,
             'device_type': device_type,
             'ssh_username': ssh_username,
             'ssh_password': ssh_password,
+            'enable_secret': enable_secret,
             'netmiko_device_type': netmiko_device_type,
         }
 
@@ -209,7 +216,7 @@ def _ssh_connect(device):
         host=device['ip_address'],
         username=device['ssh_username'],
         password=device['ssh_password'],
-        secret=device['ssh_password'],
+        secret=(device['enable_secret'] or device['ssh_password']),
     )
     if not conn.check_enable_mode():
         conn.enable()

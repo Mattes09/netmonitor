@@ -104,20 +104,22 @@ def create_device(data):
     """Insert a new device from *data* and return its new id.
 
     *data* is a dict with keys: name, ip_address, device_type, ssh_username,
-    ssh_password, netmiko_device_type (some values may be None). sqlite3 errors
-    (e.g. a duplicate ip_address UNIQUE violation) propagate to the caller.
+    ssh_password, enable_secret, netmiko_device_type (some values may be None).
+    sqlite3 errors (e.g. a duplicate ip_address UNIQUE violation) propagate to
+    the caller.
     """
     conn = get_db()
     cursor = conn.execute(
         'INSERT INTO devices '
-        '(name, ip_address, device_type, ssh_username, ssh_password, netmiko_device_type) '
-        'VALUES (?, ?, ?, ?, ?, ?)',
+        '(name, ip_address, device_type, ssh_username, ssh_password, enable_secret, netmiko_device_type) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?)',
         (
             data['name'],
             data['ip_address'],
             data['device_type'],
             data['ssh_username'],
             data['ssh_password'],
+            data['enable_secret'],
             data['netmiko_device_type'],
         ),
     )
@@ -128,7 +130,7 @@ def create_device(data):
 
 
 def update_device(device_id, data):
-    """Update all six columns of the device with *device_id* from *data*.
+    """Update all seven columns of the device with *device_id* from *data*.
 
     sqlite3 errors (e.g. a duplicate ip_address UNIQUE violation) propagate to
     the caller. Symmetric with create_device.
@@ -137,7 +139,7 @@ def update_device(device_id, data):
     conn.execute(
         'UPDATE devices SET '
         'name = ?, ip_address = ?, device_type = ?, '
-        'ssh_username = ?, ssh_password = ?, netmiko_device_type = ? '
+        'ssh_username = ?, ssh_password = ?, enable_secret = ?, netmiko_device_type = ? '
         'WHERE id = ?',
         (
             data['name'],
@@ -145,6 +147,7 @@ def update_device(device_id, data):
             data['device_type'],
             data['ssh_username'],
             data['ssh_password'],
+            data['enable_secret'],
             data['netmiko_device_type'],
             device_id,
         ),
