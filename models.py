@@ -104,7 +104,7 @@ def create_device(data):
     """Insert a new device from *data* and return its new id.
 
     *data* is a dict with keys: name, ip_address, device_type, ssh_username,
-    ssh_password, enable_secret, netmiko_device_type (some values may be None).
+    ssh_password, enable_secret (optional), netmiko_device_type (some values may be None).
     sqlite3 errors (e.g. a duplicate ip_address UNIQUE violation) propagate to
     the caller.
     """
@@ -119,7 +119,7 @@ def create_device(data):
             data['device_type'],
             data['ssh_username'],
             data['ssh_password'],
-            data['enable_secret'],
+            data.get('enable_secret'),
             data['netmiko_device_type'],
         ),
     )
@@ -147,7 +147,7 @@ def update_device(device_id, data):
             data['device_type'],
             data['ssh_username'],
             data['ssh_password'],
-            data['enable_secret'],
+            data.get('enable_secret'),
             data['netmiko_device_type'],
             device_id,
         ),
@@ -293,6 +293,7 @@ def init_db():
             device_type         TEXT NOT NULL DEFAULT 'Unknown',
             ssh_username        TEXT,
             ssh_password        TEXT,  -- TODO: encrypt in production
+            enable_secret       TEXT,
             netmiko_device_type TEXT,
             created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -301,6 +302,13 @@ def init_db():
     # Migration: add netmiko_device_type to existing databases
     try:
         c.execute('ALTER TABLE devices ADD COLUMN netmiko_device_type TEXT')
+        conn.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Migration: add enable_secret to existing databases
+    try:
+        c.execute('ALTER TABLE devices ADD COLUMN enable_secret TEXT')
         conn.commit()
     except Exception:
         pass  # Column already exists

@@ -113,7 +113,7 @@ def _norm(value):
 # becomes a clean 400 client error instead. null stays allowed (treated as empty).
 _STRING_FIELDS = (
     'name', 'ip_address', 'device_type',
-    'ssh_username', 'ssh_password', 'netmiko_device_type',
+    'ssh_username', 'ssh_password', 'enable_secret', 'netmiko_device_type',
 )
 
 
@@ -145,6 +145,7 @@ def create_device_json():
         'device_type': _norm(data.get('device_type')) or 'Unknown',
         'ssh_username': _norm(data.get('ssh_username')) or None,
         'ssh_password': _norm(data.get('ssh_password')) or None,
+        'enable_secret': _norm(data.get('enable_secret')) or None,
         'netmiko_device_type': _norm(data.get('netmiko_device_type')) or None,
     }
 
@@ -176,8 +177,8 @@ def get_device_json(id):
 def update_device_json(id):
     """Full-replace update of a device's editable fields.
 
-    Exception: ssh_password follows the password-keep rule — a missing
-    'ssh_password' key keeps the stored value (an explicit empty value clears it).
+    Exception: ssh_password and enable_secret follow the password-keep rule —
+    a missing key keeps the stored value (an explicit empty value clears it).
     """
     existing = get_device(id)
     if existing is None:
@@ -199,12 +200,18 @@ def update_device_json(id):
     else:
         ssh_password = existing['ssh_password']
 
+    if 'enable_secret' in data:
+        enable_secret = _norm(data.get('enable_secret')) or None
+    else:
+        enable_secret = existing['enable_secret']
+
     device = {
         'name': _norm(data.get('name')),
         'ip_address': _norm(data.get('ip_address')),
         'device_type': _norm(data.get('device_type')) or 'Unknown',
         'ssh_username': _norm(data.get('ssh_username')) or None,
         'ssh_password': ssh_password,
+        'enable_secret': enable_secret,
         'netmiko_device_type': _norm(data.get('netmiko_device_type')) or None,
     }
 
