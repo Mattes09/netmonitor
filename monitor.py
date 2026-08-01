@@ -108,6 +108,8 @@ def _monitor_loop():
 def start_monitor():
     """Start the background monitoring thread (daemon — exits with app)."""
     global _monitor_thread
+    if _monitor_thread is not None and _monitor_thread.is_alive():
+        return
     _stop_event.clear()
     _monitor_thread = threading.Thread(target=_monitor_loop, daemon=True, name='NetMonitor')
     _monitor_thread.start()

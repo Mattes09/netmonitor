@@ -46,7 +46,7 @@ def get_all_devices(sort_key='id'):
         LEFT JOIN ping_history ph ON ph.id = (
             SELECT id FROM ping_history
             WHERE device_id = d.id
-            ORDER BY checked_at DESC
+            ORDER BY checked_at DESC, id DESC
             LIMIT 1
         )
         ORDER BY {order_by}
@@ -332,6 +332,18 @@ def init_db():
             created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (device_id) REFERENCES devices (id) ON DELETE CASCADE
         )
+    ''')
+
+    # Indexes for the per-device, newest-first lookups (latest ping / latest
+    # backup, history listings). IF NOT EXISTS makes this self-migrating: an
+    # existing database gains both indexes on the next start.
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_ping_history_device_time
+            ON ping_history (device_id, checked_at)
+    ''')
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_config_backups_device_time
+            ON config_backups (device_id, created_at)
     ''')
 
     conn.commit()
